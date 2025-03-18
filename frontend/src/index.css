@@ -1,0 +1,117 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 350 100% 60%;
+    --primary-foreground: 0 0% 98%;
+
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+
+    --accent: 310 90% 60%;
+    --accent-foreground: 0 0% 98%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 310 90% 60%;
+
+    --radius: 0.75rem;
+  }
+
+  .glass {
+    background: rgba(29, 32, 35, 0.7);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+  }
+
+  .glass-dark {
+    background: rgba(29, 32, 35, 0.7);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+  }
+
+  .subtle-scroll::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .subtle-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .subtle-scroll::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+  }
+
+  .subtle-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+    background-image: radial-gradient(circle at 50% 60%, rgba(217, 70, 239, 0.05) 0%, rgba(29, 32, 35, 0) 60%);
+    background-size: 100% 100%;
+    background-attachment: fixed;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display font-medium tracking-tight;
+  }
+}
+
+@layer components {
+  .card-hover {
+    @apply transition-all duration-300 hover:shadow-dark-glass hover:-translate-y-1;
+  }
+
+  .btn-primary {
+    @apply bg-gradient-to-r from-pod-gradient-start to-pod-gradient-end text-white rounded-md px-4 py-2 font-medium transition-all hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-pod-pink focus:ring-opacity-50;
+  }
+
+  .btn-secondary {
+    @apply bg-secondary text-white border border-white/10 rounded-md px-4 py-2 font-medium transition-all hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-pod-pink focus:ring-opacity-50;
+  }
+
+  .chip {
+    @apply inline-block bg-white/10 text-white text-xs px-2 py-1 rounded-full font-medium;
+  }
+
+  .text-gradient {
+    @apply bg-gradient-to-r from-pod-gradient-start to-pod-gradient-end bg-clip-text text-transparent;
+  }
+}
+
+.logo-glow {
+  filter: drop-shadow(0 0 5px rgba(217, 70, 239, 0.5));
+}
