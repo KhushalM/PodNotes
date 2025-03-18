@@ -23,6 +23,7 @@ var/
 .venv
 venv/
 ENV/
+PN/
 
 # Node.js / React
 node_modules/
