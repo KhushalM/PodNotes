@@ -1,10 +1,14 @@
 from langchain.chains import RetrievalQA
 from services.chromadb_service import setup_ChromaVS, retrieve_from_ChromaVS
 
-def summarize_podcast(llm, transcript):
+def summarize_podcast(model_name, transcript):
     from langchain.text_splitter import RecursiveCharacterTextSplitter
     from langchain.chains.summarize import load_summarize_chain
     from langchain.docstore.document import Document
+    from langchain.llms import Ollama
+    
+    # Initialize the LLM
+    llm = Ollama(model=model_name)
     
     # Check if transcript is short enough for direct summarization
     if len(transcript) < 10000:  # Approximate character count for context window
