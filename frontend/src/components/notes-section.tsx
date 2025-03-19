@@ -44,11 +44,11 @@ const NotesSection: React.FC = () => {
                       <div className="text-xs text-pod-dark-gray mb-1">
                         QUESTION
                       </div>
-                      <p className="font-medium">{note.question}</p>
+                      <p className="font-medium text-black">{note.question}</p>
                     </div>
                   </div>
                   
-                  <div className="flex items-start gap-3">
+                  <div className="flex items-start gap-3 text-black">
                     <MessageSquare size={16} className="text-pod-blue shrink-0 mt-1" />
                     <div>
                       <div className="text-xs text-pod-dark-gray mb-1">

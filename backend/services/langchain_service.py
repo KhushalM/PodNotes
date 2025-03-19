@@ -36,7 +36,7 @@ def ask_question(question, transcript):
     Returns:
         str: The answer to the question
     """
-    from langchain.llms import Ollama
+    from langchain_community.llms import Ollama
     
     # Setup LLM
     llm = Ollama(model="gemma3:4b")
@@ -54,5 +54,8 @@ def ask_question(question, transcript):
         return_source_documents=True
     )
     
-    # Run the question
-    return qa_chain.run(question)
+    # Use invoke instead of run to handle multiple output keys
+    response = qa_chain.invoke(question)
+    
+    # Return just the result part of the response
+    return response["result"]

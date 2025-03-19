@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { usePodcast } from '@/context/podcast-context';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
@@ -104,7 +103,7 @@ const ChatInterface: React.FC = () => {
                         : 'bg-white rounded-tl-none'}
                     `}
                   >
-                    <p className="text-sm">{msg.content}</p>
+                    <p className="text-sm text-black">{msg.content}</p>
                     <div className={`
                       text-xs mt-1 
                       ${msg.role === 'user' ? 'text-white/70' : 'text-pod-dark-gray'}
@@ -122,7 +121,7 @@ const ChatInterface: React.FC = () => {
           )}
         </div>
       </CardContent>
-      <CardFooter className="pt-4 pb-4">
+      <CardFooter className="pt-4 pb-4 text-black">
         <form onSubmit={handleSubmit} className="w-full flex gap-2">
           <Input
             value={message}
