@@ -38,7 +38,6 @@ const UploadForm: React.FC = () => {
 
   const handleButtonClick = () => {
     fileInputRef.current?.click();
-    
   };
 
   return (
@@ -54,9 +53,9 @@ const UploadForm: React.FC = () => {
         <input
           ref={fileInputRef}
           type="file"
-          className="hidden"
-          onChange={handleFileChange}
           accept="audio/*"
+          onChange={handleFileChange}
+          className="hidden"
         />
         
         <div className="flex flex-col items-center gap-4">
@@ -79,7 +78,7 @@ const UploadForm: React.FC = () => {
               </p>
               <div className="chip mt-2">MP3, WAV, M4A formats supported</div>
               
-              <Button className="mt-4 btn-primary" onClick={handleButtonClick}>
+              <Button className="mt-4 btn-primary">
                 <Upload size={16} className="mr-2" />
                 Upload Podcast
               </Button>

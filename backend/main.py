@@ -34,8 +34,8 @@ try:
         logger.warning(f"Error importing AI services: {str(e)}")
         # Define dummy functions to avoid errors
         def transcribe_audio(audio_file_path): return "Transcription service unavailable due to numpy import error"
-        def summarise_podcast(transcript): return "Summary service unavailable due to numpy import error"
-        def langchain_ask_question(question, context): return "Question answering service unavailable due to numpy import error"
+        def summarise_podcast(llm, transcript): return "Summary service unavailable due to numpy import error"
+        def langchain_ask_question(question, context, podcast_id): return "Question answering service unavailable due to numpy import error"
     
     # Try to import optional services, but don't fail if they're not available
     try:
@@ -59,7 +59,7 @@ except Exception as e:
     def save_podcast_to_dynamodb(podcast_id, type, content, timestamp): return True
     def transcribe_audio(audio_file_path): return "Mock transcription text"
     def summarise_podcast(transcript): return "Mock summary of podcast"
-    def langchain_ask_question(question, context): return "Mock answer to your question"
+    def langchain_ask_question(question, context, podcast_id): return "Mock answer to your question"
     def setup_ChromaVS(docs): return None
     def retrieve_from_ChromaVS(vs, query): return []
     table = None
@@ -136,6 +136,7 @@ async def upload_podcast(file: UploadFile = File(...)):
         try:
             logger.info("Starting transcription...")
             transcript = transcribe_audio(temp_file_path)
+            transcript = transcript["timestamped_text"]
             logger.info("Transcription completed")
         except Exception as e:
             logger.error(f"Error transcribing audio: {str(e)}")
@@ -214,7 +215,7 @@ async def process_question(podcast_id: str, question: str = Form(...)):
         # Process question using LangChain
         try:
             logger.info("Processing question with LangChain...")
-            answer = langchain_ask_question(question, transcript)
+            answer = langchain_ask_question(question, transcript, podcast_id)
             logger.info("Answer generated")
             return {"answer": answer}
         except Exception as e:

@@ -87,10 +87,10 @@ const Index = () => {
   return (
     <PodcastProvider>
       <div className="min-h-screen bg-background">
-        <header className="border-b border-white/10 bg-black/30 backdrop-blur-sm sticky top-0 z-10 w-full">
+      <header className="border-b border-white/10 bg-black/30 backdrop-blur-sm sticky top-0 z-10 w-full py-2">
           <div className="container mx-auto">
             <div className="header-logo-centered">
-              <div className="logo-container">
+              <div className="logo-container flex items-center justify-center h-full">
                 <Logo size="lg" />
               </div>
             </div>

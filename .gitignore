@@ -38,6 +38,7 @@ out/
 build/
 .DS_Store
 *.pem
+backend/data/
 
 # TypeScript
 *.tsbuildinfo
