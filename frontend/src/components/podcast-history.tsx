@@ -5,6 +5,8 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { History, FileAudio, HelpCircle } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
+
 
 const PodcastHistory: React.FC = () => {
   const { podcasts, currentPodcast, selectPodcast } = usePodcast();

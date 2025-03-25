@@ -3,12 +3,18 @@ import os
 import logging
 import socket
 from botocore.exceptions import ClientError
+from langchain_community.vectorstores import Chroma
+from services.chromadb_service import get_embeddings
+from pathlib import Path
+from datetime import datetime
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
 # Determine if we're in local development mode
 IS_LOCAL = os.environ.get('IS_LOCAL', 'true').lower() == 'true'
+LOCAL_VECTOR_STORE_DIR = Path(os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "vector_stores"))
+os.makedirs(LOCAL_VECTOR_STORE_DIR, exist_ok=True)
 
 # LocalStack endpoint (if using LocalStack)
 LOCALSTACK_ENDPOINT = 'http://localhost:4566'  # Standard LocalStack port
@@ -128,10 +134,15 @@ def upload_file_to_s3(file_name, bucket, object_name=None):
     s3.upload_fileobj(file_name, bucket, object_name)
     return f"s3://{bucket}/{object_name}"
 
-def save_podcast_to_dynamodb(podcast_id, type, content, timestamp):
+def save_podcast_to_dynamodb(podcast_id, type, content=None, timestamp=datetime.now()):
     if not aws_available:
         logger.warning(f"AWS services not available. Skipping DynamoDB save for {podcast_id}, {type}")
         return
+
+    if type == "vector_store":
+        local_path = LOCAL_VECTOR_STORE_DIR / f"{podcast_id}.json"
+        vector_store = Chroma(persist_directory=str(local_path), embedding_function=get_embeddings())
+        content = vector_store
         
     table.put_item(
         Item={

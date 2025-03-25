@@ -4,6 +4,7 @@ import logging
 import os
 import shutil
 import boto3
+import datetime
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -34,8 +35,8 @@ try:
         logger.warning(f"Error importing AI services: {str(e)}")
         # Define dummy functions to avoid errors
         def transcribe_audio(audio_file_path): return "Transcription service unavailable due to numpy import error"
-        def summarise_podcast(llm, transcript): return "Summary service unavailable due to numpy import error"
-        def langchain_ask_question(question, context, podcast_id): return "Question answering service unavailable due to numpy import error"
+        def summarise_podcast(transcript): return "Summary service unavailable due to numpy import error"
+        def langchain_ask_question(question, podcast_id): return "Question answering service unavailable due to numpy import error"
     
     # Try to import optional services, but don't fail if they're not available
     try:
@@ -47,8 +48,6 @@ try:
         def setup_ChromaVS(docs): return None
         def retrieve_from_ChromaVS(vs, query): return []
     
-    from datetime import datetime
-    
     logger.info("AWS services initialized successfully")
 except Exception as e:
     logger.error(f"Error importing services: {str(e)}")
@@ -59,7 +58,7 @@ except Exception as e:
     def save_podcast_to_dynamodb(podcast_id, type, content, timestamp): return True
     def transcribe_audio(audio_file_path): return "Mock transcription text"
     def summarise_podcast(transcript): return "Mock summary of podcast"
-    def langchain_ask_question(question, context, podcast_id): return "Mock answer to your question"
+    def langchain_ask_question(question, podcast_id): return "Mock answer to your question"
     def setup_ChromaVS(docs): return None
     def retrieve_from_ChromaVS(vs, query): return []
     table = None
@@ -137,6 +136,7 @@ async def upload_podcast(file: UploadFile = File(...)):
             logger.info("Starting transcription...")
             transcript = transcribe_audio(temp_file_path)
             transcript = transcript["timestamped_text"]
+            save_podcast_to_dynamodb(object_name, "transcript", transcript)
             logger.info("Transcription completed")
         except Exception as e:
             logger.error(f"Error transcribing audio: {str(e)}")
@@ -145,7 +145,7 @@ async def upload_podcast(file: UploadFile = File(...)):
         # Save transcript to DynamoDB
         try:
             logger.info("Saving transcript to DynamoDB...")
-            save_podcast_to_dynamodb(object_name, "transcript", transcript, datetime.now())
+            save_podcast_to_dynamodb(object_name, "transcript", transcript)
             logger.info("Transcript saved to DynamoDB")
         except Exception as e:
             logger.error(f"Error saving transcript to DynamoDB: {str(e)}")
@@ -154,13 +154,18 @@ async def upload_podcast(file: UploadFile = File(...)):
         # Generate summary
         try:
             logger.info("Setting up ChromaVS...")
-            vector_store = setup_ChromaVS([transcript])
+            vector_store = setup_ChromaVS(transcript, object_name)
+        
+            # logger.info("ChromaVS setup completed, Saving Vector Store to DynamoDB...")
+            # save_podcast_to_dynamodb(podcast_id=object_name, type="vector_store")
+            # logger.info("Vector Store saved to DynamoDB")
+
             logger.info("Generating summary...")
-            summary = summarise_podcast("gemma3:4b", transcript)
+            summary = summarise_podcast(transcript=transcript)
             logger.info("Summary generated")
             
             logger.info("Saving summary to DynamoDB...")
-            save_podcast_to_dynamodb(object_name, "summary", summary, datetime.now())
+            save_podcast_to_dynamodb(object_name, "summary", summary, datetime.datetime.now())
             logger.info("Summary saved to DynamoDB")
         except Exception as e:
             logger.error(f"Error generating or saving summary: {str(e)}")
@@ -202,6 +207,7 @@ async def process_question(podcast_id: str, question: str = Form(...)):
                     'Type': 'transcript'
                 }
             )
+           
             transcript = response.get('Item', {}).get('Content', '')
             if not transcript:
                 logger.error(f"Transcript not found for podcast: {podcast_id}")
@@ -215,7 +221,7 @@ async def process_question(podcast_id: str, question: str = Form(...)):
         # Process question using LangChain
         try:
             logger.info("Processing question with LangChain...")
-            answer = langchain_ask_question(question, transcript, podcast_id)
+            answer = langchain_ask_question(question, podcast_id)
             logger.info("Answer generated")
             return {"answer": answer}
         except Exception as e:

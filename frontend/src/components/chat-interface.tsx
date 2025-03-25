@@ -17,7 +17,7 @@ const ChatInterface: React.FC = () => {
     sendChatMessage(message);
     setMessage('');
   };
-
+  
   const handleSaveNote = () => {
     // Find the last question and answer pair
     const lastUserMessageIndex = [...chatMessages].reverse().findIndex(msg => msg.role === 'user');

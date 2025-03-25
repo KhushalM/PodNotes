@@ -5,7 +5,7 @@ source ../PN/bin/activate
 
 # Set environment variables
 export IS_LOCAL=true
-export MOCK_MODE=true
+export MOCK_MODE=false
 
 echo "Starting backend with IS_LOCAL=$IS_LOCAL and MOCK_MODE=$MOCK_MODE"
 echo "Using Python: $(which python)"

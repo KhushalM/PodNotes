@@ -1,9 +1,17 @@
-from langchain.chains import RetrievalQA
+from langchain_core.callbacks import CallbackManager, StreamingStdOutCallbackHandler
 from services.chromadb_service import setup_ChromaVS, retrieve_from_ChromaVS, add_chat_message_to_ChromaVS
 from langchain.memory import ConversationBufferMemory
+from langchain_community.llms import Ollama
+from services.chromadb_service import vector_stores
+from langchain_community.vectorstores import Chroma
 from langchain.chains import ConversationalRetrievalChain
+from pathlib import Path
+import logging
 import os
 import json
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Dictionary to store chat histories for each podcast
 # Format: {podcast_id: [{"role": "human", "content": "..."}, {"role": "ai", "content": "..."}]}
@@ -13,21 +21,31 @@ chat_histories = {}
 CHAT_HISTORY_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "chat_histories")
 os.makedirs(CHAT_HISTORY_DIR, exist_ok=True)
 
-def summarize_podcast(model_name, transcript):
+VECTOR_STORE_DIR = Path(os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "vector_stores"))
+os.makedirs(VECTOR_STORE_DIR, exist_ok=True)
+
+def get_llm():
+    model_name = "gemma3:4b"
+    callback_manager = CallbackManager([StreamingStdOutCallbackHandler()])
+    return Ollama(model=model_name, callback_manager=callback_manager)
+
+def summarize_podcast(transcript):
     from langchain.text_splitter import RecursiveCharacterTextSplitter
     from langchain.chains.summarize import load_summarize_chain
     from langchain.docstore.document import Document
-    from langchain_community.llms import Ollama
+    
     
     # Initialize the LLM
-    llm = Ollama(model=model_name)
+    llm = get_llm()
     
     # Check if transcript is short enough for direct summarization
-    if len(transcript) < 10000:  # Approximate character count for context window
+    if len(transcript) < 10000:
+        logger.info("Transcript is short enough for direct summarization")  # Approximate character count for context window
         summarizer = load_summarize_chain(llm, chain_type="stuff")
         return summarizer.run([Document(page_content=transcript)])
     
     # For longer transcripts, use map-reduce
+    logger.info("Transcript is too long for direct summarization, using map-reduce")
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=2000, chunk_overlap=200)
     docs = text_splitter.create_documents([transcript])
     
@@ -68,7 +86,7 @@ def save_chat_history(podcast_id, history):
     with open(history_file, 'w') as f:
         json.dump(history, f)
 
-def ask_question(question, transcript, podcast_id=None):
+def ask_question(question, podcast_id):
     """
     Process a question against a transcript using LangChain, with chat history support.
     
@@ -81,10 +99,22 @@ def ask_question(question, transcript, podcast_id=None):
         str: The answer to the question
     """
     from langchain_community.llms import Ollama
+    logger.info("Processing question with LangChain...")
+    logger.info(f"Question: {question}")
+    logger.info(f"Podcast ID: {podcast_id}")
     
     # Setup LLM
-    llm = Ollama(model="gemma3:4b")
-    
+    llm = get_llm()
+    local_path = VECTOR_STORE_DIR / f"{podcast_id}.chroma"
+
+    # Get the vector store
+    if local_path.exists():
+        logger.info(f"Vector store found for podcast: {podcast_id}")
+        retriever = retrieve_from_ChromaVS(podcast_id, question)
+    else:
+        logger.error("Attempted to get answer with no podcast loaded")
+        return {"error": "Please upload a podcast first before asking questions."}
+
     # Load chat history if podcast_id is provided
     chat_history = []
     if podcast_id:
@@ -92,6 +122,7 @@ def ask_question(question, transcript, podcast_id=None):
         if podcast_id not in chat_histories:
             chat_histories[podcast_id] = load_chat_history(podcast_id)
         
+        logger.info(f"Chat history loaded for podcast: {podcast_id}")
         # Add the current question to the vector store
         add_chat_message_to_ChromaVS(f"User question: {question}", podcast_id)
         
@@ -103,12 +134,6 @@ def ask_question(question, transcript, podcast_id=None):
                 # Update the last tuple with the AI response
                 last_human, _ = chat_history[-1]
                 chat_history[-1] = (last_human, message["content"])
-    
-    # Setup vector store with podcast_id for persistence
-    vector_store = setup_ChromaVS([transcript], podcast_id)
-    
-    # Create retriever
-    retriever = vector_store.as_retriever()
     
     # Create memory object
     memory = ConversationBufferMemory(
