@@ -1,5 +1,6 @@
 from langchain_core.callbacks import CallbackManager, StreamingStdOutCallbackHandler
 from services.chromadb_service import setup_ChromaVS, retrieve_from_ChromaVS, add_chat_message_to_ChromaVS
+from services.opensearch_service import setup_opensearch_vector_store, retrieve_from_opensearch, add_message_to_opensearch
 from langchain.memory import ConversationBufferMemory
 from langchain_community.llms import Ollama
 from services.chromadb_service import vector_stores
@@ -12,6 +13,9 @@ import json
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Check if we're in local mode
+IS_LOCAL = os.environ.get('IS_LOCAL', 'true').lower() == 'true'
 
 # Dictionary to store chat histories for each podcast
 # Format: {podcast_id: [{"role": "human", "content": "..."}, {"role": "ai", "content": "..."}]}
@@ -99,21 +103,26 @@ def ask_question(question, podcast_id):
         str: The answer to the question
     """
     from langchain_community.llms import Ollama
-    logger.info("Processing question with LangChain...")
-    logger.info(f"Question: {question}")
-    logger.info(f"Podcast ID: {podcast_id}")
+    logger.info(f"Processing question for podcast: {podcast_id}")
     
     # Setup LLM
     llm = get_llm()
     local_path = VECTOR_STORE_DIR / f"{podcast_id}.chroma"
 
-    # Get the vector store
-    if local_path.exists():
-        logger.info(f"Vector store found for podcast: {podcast_id}")
-        retriever = retrieve_from_ChromaVS(podcast_id, question)
+    # Get the vector store retriever
+    if IS_LOCAL:
+        # Use local ChromaDB
+        if local_path.exists():
+            retriever = retrieve_from_ChromaVS(podcast_id, question)
+        else:
+            logger.error("Attempted to get answer with no podcast loaded")
+            return {"error": "Please upload a podcast first before asking questions."}
     else:
-        logger.error("Attempted to get answer with no podcast loaded")
-        return {"error": "Please upload a podcast first before asking questions."}
+        # Use OpenSearch
+        retriever = retrieve_from_opensearch(podcast_id, question)
+        if isinstance(retriever, str):
+            logger.error(f"OpenSearch retriever error: {retriever}")
+            return {"error": "Please upload a podcast first before asking questions."}
 
     # Load chat history if podcast_id is provided
     chat_history = []
@@ -122,9 +131,11 @@ def ask_question(question, podcast_id):
         if podcast_id not in chat_histories:
             chat_histories[podcast_id] = load_chat_history(podcast_id)
         
-        logger.info(f"Chat history loaded for podcast: {podcast_id}")
         # Add the current question to the vector store
-        add_chat_message_to_ChromaVS(f"User question: {question}", podcast_id)
+        if IS_LOCAL:
+            add_chat_message_to_ChromaVS(f"User question: {question}", podcast_id)
+        else:
+            add_message_to_opensearch(f"User question: {question}", podcast_id)
         
         # Convert the chat history to the format expected by LangChain
         for message in chat_histories[podcast_id]:
@@ -148,16 +159,41 @@ def ask_question(question, podcast_id):
             if ai_msg:  # Add AI response if available
                 memory.chat_memory.add_ai_message(ai_msg)
     
-    # Create conversational QA chain
+    # Create a custom prompt template to prevent self-evaluation
+    from langchain.prompts import PromptTemplate
+    
+    qa_template = """You are a helpful assistant answering questions about a podcast.
+    Use the following pieces of context to answer the question at the end.
+    If you don't know the answer, just say that you don't know, don't try to make up an answer.
+    Keep your answers direct and to the point without evaluating your own response.
+    Do not include phrases like "based on the context" or "according to the transcript".
+    
+    Context: {context}
+    
+    Question: {question}
+    
+    Answer: """
+    
+    QA_PROMPT = PromptTemplate(
+        template=qa_template, 
+        input_variables=["context", "question"]
+    )
+    
+    # Create conversational QA chain with custom prompt
     qa_chain = ConversationalRetrievalChain.from_llm(
         llm=llm,
         retriever=retriever,
-        memory=memory
+        memory=memory,
+        combine_docs_chain_kwargs={"prompt": QA_PROMPT}
     )
     
     # Get response
     response = qa_chain({"question": question})
     answer = response["answer"]
+    
+    # Clean the answer by removing self-evaluation text
+    if "Yes, that's a correct summary" in answer:
+        answer = answer.split("Yes, that's a correct summary")[0].strip()
     
     # Update chat history if podcast_id is provided
     if podcast_id:
@@ -166,6 +202,9 @@ def ask_question(question, podcast_id):
         save_chat_history(podcast_id, chat_histories[podcast_id])
         
         # Add the answer to the vector store as well
-        add_chat_message_to_ChromaVS(f"AI answer: {answer}", podcast_id)
+        if IS_LOCAL:
+            add_chat_message_to_ChromaVS(f"AI answer: {answer}", podcast_id)
+        else:
+            add_message_to_opensearch(f"AI answer: {answer}", podcast_id)
     
     return answer

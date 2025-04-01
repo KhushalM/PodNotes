@@ -1,3 +1,4 @@
+from math import log
 import boto3
 import os
 import logging
@@ -70,6 +71,9 @@ try:
         dynamodb = boto3.client('dynamodb', **common_args)
         dynamodb_resource = boto3.resource('dynamodb', **common_args)
         
+        # Initialize OpenSearch client
+        opensearch_client = boto3.client('opensearch', **common_args)
+        
         # Test connection by making a simple call
         s3.list_buckets()
         
@@ -87,11 +91,11 @@ try:
                     dynamodb.create_table(
                         TableName='Podcasts',
                         KeySchema=[
-                            {'AttributeName': 'PodcastId', 'KeyType': 'HASH'},
+                            {'AttributeName': 'PodcastID', 'KeyType': 'HASH'},
                             {'AttributeName': 'Type', 'KeyType': 'RANGE'}
                         ],
                         AttributeDefinitions=[
-                            {'AttributeName': 'PodcastId', 'AttributeType': 'S'},
+                            {'AttributeName': 'PodcastID', 'AttributeType': 'S'},
                             {'AttributeName': 'Type', 'AttributeType': 'S'}
                         ],
                         ProvisionedThroughput={'ReadCapacityUnits': 5, 'WriteCapacityUnits': 5}
@@ -118,6 +122,7 @@ except Exception as e:
     dynamodb = None
     dynamodb_resource = None
     table = None
+    opensearch_client = None
 
 def upload_file_to_s3(file_name, bucket, object_name=None):
     if not aws_available:
@@ -138,7 +143,7 @@ def save_podcast_to_dynamodb(podcast_id, type, content=None, timestamp=datetime.
     if not aws_available:
         logger.warning(f"AWS services not available. Skipping DynamoDB save for {podcast_id}, {type}")
         return
-
+    
     if type == "vector_store":
         local_path = LOCAL_VECTOR_STORE_DIR / f"{podcast_id}.json"
         vector_store = Chroma(persist_directory=str(local_path), embedding_function=get_embeddings())
@@ -146,7 +151,7 @@ def save_podcast_to_dynamodb(podcast_id, type, content=None, timestamp=datetime.
         
     table.put_item(
         Item={
-            'PodcastId': podcast_id,
+            'PodcastID': podcast_id,  # Changed from 'PodcastId' to 'PodcastID' to match DynamoDB schema
             'Type': type,
             'Content': content,
             'Timestamp': str(timestamp)
