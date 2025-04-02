@@ -184,7 +184,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         lineOpacity={0.02}
         shapeCount={60}
       />
-      <header className="sticky top-0 z-50 w-full backdrop-blur-sm border-b border-border/40 bg-background/80">
+      <header className="sticky top-0 z-50 w-full backdrop-blur-sm border-b-2 border-border/40 bg-background/80">
         <div className="container flex h-16 items-center">
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center">
