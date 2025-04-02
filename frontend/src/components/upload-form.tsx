@@ -15,6 +15,8 @@ const UploadForm: React.FC = () => {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       startUploadProcess(e.target.files[0]);
+      // Reset the input value so the same file can be selected again if needed
+      e.target.value = '';
     }
   };
 
@@ -39,6 +41,16 @@ const UploadForm: React.FC = () => {
   };
 
   const startUploadProcess = (file: File) => {
+    // Validate file type
+    const validTypes = ['audio/mpeg', 'audio/wav', 'audio/mp4', 'audio/x-m4a'];
+    if (!validTypes.includes(file.type) && 
+        !file.name.toLowerCase().endsWith('.mp3') && 
+        !file.name.toLowerCase().endsWith('.wav') && 
+        !file.name.toLowerCase().endsWith('.m4a')) {
+      alert('Please upload a valid audio file (MP3, WAV, or M4A)');
+      return;
+    }
+    
     // Simulate upload progress
     setUploadProgress(0);
     setProcessingStage('uploading');
@@ -65,14 +77,17 @@ const UploadForm: React.FC = () => {
         setProcessingStage(null);
         setUploadProgress(0);
       }, 2000);
-    }).catch(() => {
+    }).catch((error) => {
+      console.error("Upload error:", error);
       clearInterval(interval);
       setProcessingStage('error');
     });
   };
 
   const handleButtonClick = () => {
-    fileInputRef.current?.click();
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
   };
 
   const renderProcessingStage = () => {
@@ -106,19 +121,19 @@ const UploadForm: React.FC = () => {
               <Headphones size={48} className="text-blue-400" />
             </div>
             <h3 className="text-xl font-semibold mb-2">Transcribing Audio</h3>
-            <p className="text-white/70">
+            <p className="text-black/70">
               Our AI is converting your podcast to text and identifying speakers
             </p>
             <div className="mt-4 space-y-2">
               <div className="flex items-center text-sm">
                 <CheckCircle2 size={16} className="text-green-400 mr-2" />
-                <span className="text-white/70">Audio uploaded successfully</span>
+                <span className="text-black/70">Audio uploaded successfully</span>
               </div>
               <div className="flex items-center text-sm">
                 <Clock size={16} className="text-yellow-400 mr-2 animate-pulse" />
-                <span className="text-white/70">Generating transcript</span>
+                <span className="text-black/70">Generating transcript</span>
               </div>
-              <div className="flex items-center text-sm text-white/50">
+              <div className="flex items-center text-sm text-black/50">
                 <Clock size={16} className="mr-2" />
                 <span>Creating summary</span>
               </div>
@@ -173,6 +188,7 @@ const UploadForm: React.FC = () => {
             <Button 
               className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white border-none"
               onClick={handleButtonClick}
+              disabled={isLoading}
             >
               <Upload size={16} className="mr-2" />
               Upload Podcast
@@ -201,7 +217,7 @@ const UploadForm: React.FC = () => {
         <input
           ref={fileInputRef}
           type="file"
-          accept="audio/*"
+          accept="audio/mp3,audio/wav,audio/m4a,audio/*"
           onChange={handleFileChange}
           className="hidden"
           disabled={isLoading}

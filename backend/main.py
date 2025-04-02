@@ -24,7 +24,7 @@ app.add_middleware(
 
 # Import AWS services with error handling
 try:
-    from services.aws_service import upload_file_to_s3, save_podcast_to_dynamodb, table, aws_available, convert_floats_to_decimals
+    from services.aws_service import upload_file_to_s3, save_podcast_to_dynamodb, table, aws_available
     
     # Try to import services that depend on numpy, but don't fail if they're not available
     try:

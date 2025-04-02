@@ -151,11 +151,11 @@ const TranscriptView: React.FC = () => {
           <TabsContent value="transcript" className="mt-0">
             <div className="mb-4 flex gap-2">
               <div className="relative flex-grow">
-                <Search size={16} className="absolute left-2.5 top-2.5 text-gray-400" />
+                <Search size={16} className="absolute left-2.5 top-2.5 text-white/400" />
                 <Input 
                   type="text" 
                   placeholder="Search transcript..." 
-                  className="pl-9 bg-gray-900 border-gray-800 focus-visible:ring-gray-700"
+                  className="pl-9 bg-white/900 border-white/800 focus-visible:ring-white/700"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -163,7 +163,7 @@ const TranscriptView: React.FC = () => {
               <Button 
                 variant="outline" 
                 size="icon" 
-                className={`h-10 w-10 ${showTimestamps ? 'bg-black text-white border-gray-800' : 'bg-gray-900 border-gray-800'}`}
+                className={`h-10 w-10 ${showTimestamps ? 'bg-black text-white border-white/800' : 'bg-gray-900 border-gray-800'}`}
                 onClick={() => setShowTimestamps(!showTimestamps)}
               >
                 <Clock size={16} />
