@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { usePodcast } from '@/hooks/use-podcast';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { MessageSquare, Send, Sparkles, ThumbsUp, ThumbsDown, Copy, Bookmark, Share2, X } from 'lucide-react';
@@ -24,6 +24,7 @@ const QASection: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [showChat, setShowChat] = useState(true);
+  const isInitialRender = useRef(true);
 
   // Load saved messages from localStorage when podcast changes
   useEffect(() => {
@@ -51,6 +52,13 @@ const QASection: React.FC = () => {
       localStorage.setItem(`chat_messages_${currentPodcast.id}`, JSON.stringify(messages));
     }
   }, [messages, currentPodcast]);
+
+  // Reset isInitialRender after component mounts
+  useEffect(() => {
+    if (isInitialRender.current) {
+      isInitialRender.current = false;
+    }
+  }, []);
 
   if (!currentPodcast) {
     return null;
@@ -110,12 +118,57 @@ const QASection: React.FC = () => {
     }
   };
 
-  const handleSuggestedQuestion = (q: string) => {
+  const handleSuggestedQuestion = async (q: string) => {
     setQuestion(q);
-    // Auto-submit after a short delay
-    setTimeout(() => {
-      handleSubmit();
-    }, 500);
+    
+    // Directly submit the question without setTimeout
+    // Create a copy of the question to use in the async function
+    const questionToAsk = q;
+    
+    // Add user message immediately
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: questionToAsk,
+      timestamp: new Date(),
+    };
+    
+    setMessages(prev => [...prev, userMessage]);
+    setQuestion('');
+    setIsLoading(true);
+    
+    try {
+      console.log(`Asking suggested question about podcast ${currentPodcast.id}: "${questionToAsk}"`);
+      
+      // Call the API directly
+      const answer = await askQuestion(currentPodcast.id, questionToAsk);
+      console.log(`Received answer from API:`, answer);
+      
+      // Add assistant message with the answer
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: answer,
+        timestamp: new Date(),
+      };
+      
+      setMessages(prev => [...prev, assistantMessage]);
+    } catch (error) {
+      console.error("Error getting answer:", error);
+      toast.error("Failed to get answer. Please try again.");
+      
+      // Add error message
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: "I'm sorry, I couldn't process your question. Please try again.",
+        timestamp: new Date(),
+      };
+      
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleFeedback = (messageId: string, type: 'like' | 'dislike' | 'save') => {
@@ -196,7 +249,7 @@ const QASection: React.FC = () => {
   return (
     <Card className="w-full glass animate-fade-in">
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center justify-between">
+        <CardTitle className="flex items-center justify-center bg-gradient-to-r from-green-500/20 to-blue-500/20 p-4 rounded-full mb-4">
           <div className="flex items-center gap-2">
             <MessageSquare size={18} className="text-pod-dark-blue" />
             <span>Ask Questions</span>
@@ -216,21 +269,33 @@ const QASection: React.FC = () => {
       <CardContent className="px-0">
         {showChat ? (
           messages.length === 0 ? (
-            <div className="mb-6">
-              <h3 className="text-sm font-medium mb-2">Suggested Questions</h3>
-              <div className="flex flex-wrap gap-2">
-                {suggestedQuestions.map((q, i) => (
-                  <button
-                    key={i}
-                    className="bg-black text-white px-3 py-1.5 rounded-lg text-sm hover:bg-gray-900 transition-colors flex items-center"
-                    onClick={() => handleSuggestedQuestion(q)}
-                  >
-                    <Sparkles size={12} className="mr-1.5 text-pod-dark-blue" />
-                    {q}
-                  </button>
-                ))}
-              </div>
+            <div className="h-full flex flex-col items-center justify-center text-center p-6">
+            <div className="bg-gradient-to-r from-green-500/20 to-blue-500/20 p-4 rounded-full mb-4">
+              <MessageSquare size={32} className="text-green-400" />
             </div>
+            <h3 className="text-xl font-semibold mb-2">Ask About This Podcast</h3>
+            <p className="text-black/70 mb-6 max-w-md">
+              Ask any question about the podcast content and get AI-powered answers based on the transcript
+            </p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 w-full">
+              {suggestedQuestions.map((q, i) => (
+                <Button 
+                  key={i}
+                  variant="outline" 
+                  className="justify-start h-auto py-3 px-4 bg-slate-800/50 border-slate-700 hover:bg-slate-700/50 text-left"
+                  onClick={() => {
+                    setShowChat(true);
+                    setTimeout(() => handleSuggestedQuestion(q), 100);
+                  }}
+                  disabled={isLoading}
+                >
+                  <MessageSquare size={14} className="mr-2 flex-shrink-0 text-green-400" />
+                  <span className="truncate">{q}</span>
+                </Button>
+              ))}
+            </div>
+          </div>
           ) : (
             <ScrollArea className="h-[400px] pr-4">
               <div className="flex flex-col gap-4 mb-4 px-6">
@@ -314,11 +379,11 @@ const QASection: React.FC = () => {
               <MessageSquare size={32} className="text-green-400" />
             </div>
             <h3 className="text-xl font-semibold mb-2">Ask About This Podcast</h3>
-            <p className="text-white/70 mb-6 max-w-md">
+            <p className="text-black/70 mb-6 max-w-md">
               Ask any question about the podcast content and get AI-powered answers based on the transcript
             </p>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 w-full max-w-lg">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 w-full">
               {suggestedQuestions.map((q, i) => (
                 <Button 
                   key={i}
@@ -326,8 +391,9 @@ const QASection: React.FC = () => {
                   className="justify-start h-auto py-3 px-4 bg-slate-800/50 border-slate-700 hover:bg-slate-700/50 text-left"
                   onClick={() => {
                     setShowChat(true);
-                    handleSuggestedQuestion(q);
+                    setTimeout(() => handleSuggestedQuestion(q), 100);
                   }}
+                  disabled={isLoading}
                 >
                   <MessageSquare size={14} className="mr-2 flex-shrink-0 text-green-400" />
                   <span className="truncate">{q}</span>
