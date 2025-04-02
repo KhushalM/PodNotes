@@ -187,7 +187,6 @@ const UploadForm: React.FC = () => {
             </div>
             <Button 
               className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white border-none"
-              onClick={handleButtonClick}
               disabled={isLoading}
             >
               <Upload size={16} className="mr-2" />
