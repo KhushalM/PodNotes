@@ -7,7 +7,8 @@ interface ElegantBackgroundProps extends React.HTMLAttributes<HTMLDivElement> {
   dotOpacity?: number;
   lineColor?: string;
   lineOpacity?: number;
-  dotCount?: number;
+  shapeCount?: number;
+  lineCount?: number;
   animated?: boolean;
 }
 
@@ -19,10 +20,11 @@ export const ElegantBackground = React.forwardRef<
     {
       className,
       dotColor = "#1E2124",
-      dotOpacity = 0.9,
+      dotOpacity = 0.15,
       lineColor = "#1E2124",
-      lineOpacity = 0.5,
-      dotCount = 100000,
+      lineOpacity = 0.1,
+      shapeCount = 100,
+      lineCount = 15,
       animated = true,
       ...props
     },
@@ -36,89 +38,116 @@ export const ElegantBackground = React.forwardRef<
       return min + r * (max - min);
     };
 
-    // Generate random dots
-    const generateRandomDots = React.useCallback(() => {
-      return Array.from({ length: dotCount }, (_, i) => {
-        const x = random(5, 95, i * 3.7);
-        const y = random(5, 95, i * 5.3);
-        const size = random(2, 6, i * 7.1);
-        const shape = Math.floor(random(0, 3, i * 11.3)); // 0: circle, 1: square, 2: triangle
-        const delay = random(0, 2, i * 13.7);
-        
-        return { x, y, size, shape, delay };
-      });
-    }, [dotCount]);
+    // Format number to fixed decimal places to ensure valid SVG path syntax
+    const formatNumber = (num: number): string => {
+      return num.toFixed(2);
+    };
 
-    const [dots, setDots] = React.useState(() => generateRandomDots());
+    // Generate slanted flowing lines from bottom left to top right
+    const generateSlantedLines = React.useCallback(() => {
+      return Array.from({ length: lineCount }, (_, i) => {
+        // Create slanted lines from bottom left to top right
+        const startX = random(-20, 30, i * 13.7); // Start left of the viewport
+        const startY = random(70, 120, i * 17.3); // Start near bottom
+        const endX = random(70, 120, i * 19.7); // End right of the viewport
+        const endY = random(-20, 30, i * 23.5); // End near top
+        
+        // Control points for curve
+        const ctrl1X = random(20, 40, i * 29.1);
+        const ctrl1Y = random(50, 70, i * 31.3);
+        const ctrl2X = random(60, 80, i * 37.9);
+        const ctrl2Y = random(30, 50, i * 41.7);
+        
+        // Create a curved path
+        const path = `M${formatNumber(startX)},${formatNumber(startY)} C${formatNumber(ctrl1X)},${formatNumber(ctrl1Y)} ${formatNumber(ctrl2X)},${formatNumber(ctrl2Y)} ${formatNumber(endX)},${formatNumber(endY)}`;
+        
+        const opacity = random(0.05, 0.15, i * 43.5);
+        const width = random(0.1, 0.4, i * 47.1);
+        
+        return { 
+          path, 
+          width, 
+          opacity, 
+          duration: random(5, 10, i * 53.3), 
+          delay: random(0, 3, i * 59.9) 
+        };
+      });
+    }, [lineCount]);
+
+    // Generate multiple shape types
+    const generateShapes = React.useCallback(() => {
+      return Array.from({ length: shapeCount }, (_, i) => {
+        const x = random(5, 95, i * 3.7);
+        const y = random(5, 95, i * 4.3);
+        const size = random(0.2, 0.8, i * 7.1);
+        const delay = random(0, 2, i * 13.7);
+        const shape = Math.floor(random(0, 3, i * 11.3)); // 0: circle, 1: square, 2: triangle
+        
+        return { x, y, size, delay, shape };
+      });
+    }, [shapeCount]);
+
+    const [shapes, setShapes] = React.useState(() => generateShapes());
+    const [lines, setLines] = React.useState(() => generateSlantedLines());
 
     React.useEffect(() => {
-      setDots(generateRandomDots());
-    }, [generateRandomDots]);
+      setShapes(generateShapes());
+      setLines(generateSlantedLines());
+    }, [generateShapes, generateSlantedLines]);
+
+    // Function to generate triangle points without percent signs
+    const getTrianglePoints = (x, y, size) => {
+      return `${formatNumber(x)},${formatNumber(y-size)} ${formatNumber(x-size)},${formatNumber(y+size)} ${formatNumber(x+size)},${formatNumber(y+size)}`;
+    };
 
     return (
       <div
         ref={ref}
         className={cn("absolute inset-0 overflow-hidden -z-10", className)}
+        style={{ backgroundColor: 'transparent' }}
         {...props}
       >
         <svg
           className="absolute w-full h-full"
           xmlns="http://www.w3.org/2000/svg"
-          width="100%"
-          height="100%"
+          viewBox="0 0 100 100"
+          preserveAspectRatio="none"
         >
-          {/* Flowing wave lines similar to the reference image */}
+          {/* Slanted flowing lines */}
           <g>
-            {Array.from({ length: 30 }, (_, i) => {
-              // Create multiple thin lines with gentle curves
-              const yPosition = 5 + (i * 3); // Distribute lines more densely
-              const amplitude = random(2, 8, i * 13.7); // Smaller amplitude for gentle curves
-              const frequency = random(0.5, 1.5, i * 17.3); // Frequency of waves
-              const phase = random(0, Math.PI * 2, i * 19.7); // Random phase shift
-              const opacity = random(0.3, 0.6, i * 23.5); // Semi-transparent
-              const width = random(0.5, 1.5, i * 29.1); // Thinner lines
-              
-              // Create a path with multiple points to form a wave
-              let path = `M0,${yPosition}%`;
-              
-              // Add points to create a flowing wave
-              for (let x = 0; x <= 100; x += 5) {
-                const y = yPosition + Math.sin(x * 0.05 * frequency + phase) * amplitude;
-                path += ` L${x}%,${y}%`;
-              }
-              
-              return (
-                <motion.path
-                  key={`wave-${i}`}
-                  d={path}
-                  stroke="#000000"
-                  strokeWidth={width}
-                  strokeOpacity={opacity}
-                  fill="none"
-                  initial={{ pathLength: 0 }}
-                  animate={{ pathLength: 1 }}
-                  transition={{
-                    duration: random(3, 6, i * 31.3),
-                    delay: random(0, 2, i * 37.9),
-                    ease: "easeInOut",
-                  }}
-                />
-              );
-            })}
+            {lines.map((line, i) => (
+              <motion.path
+                key={`line-${i}`}
+                d={line.path}
+                stroke={lineColor}
+                strokeWidth={line.width}
+                strokeOpacity={line.opacity}
+                fill="none"
+                initial={{ pathLength: 0 }}
+                animate={{ pathLength: 1 }}
+                transition={{
+                  duration: line.duration,
+                  delay: line.delay,
+                  ease: "easeInOut",
+                  repeat: Infinity,
+                  repeatType: "loop",
+                  repeatDelay: 2,
+                }}
+              />
+            ))}
           </g>
 
-          {/* Random shapes */}
+          {/* Multiple shape types */}
           <g>
-            {dots.map((dot, i) => {
-              // Render different shapes based on the shape value
-              if (dot.shape === 0) {
+            {shapes.map((shape, i) => {
+              if (shape.shape === 0) {
                 // Circle
                 return animated ? (
                   <motion.circle
-                    key={`dot-${i}`}
-                    cx={`${dot.x}%`}
-                    cy={`${dot.y}%`}
-                    r={dot.size}
+                    key={`shape-${i}`}
+                    cx={formatNumber(shape.x)}
+                    cy={formatNumber(shape.y)}
+                    r={formatNumber(shape.size)}
                     fill={dotColor}
                     fillOpacity={dotOpacity}
                     initial={{ opacity: 0, scale: 0 }}
@@ -128,29 +157,29 @@ export const ElegantBackground = React.forwardRef<
                     }}
                     transition={{
                       duration: 2,
-                      delay: dot.delay,
+                      delay: shape.delay,
                       ease: "easeInOut",
                     }}
                   />
                 ) : (
                   <circle
-                    key={`dot-${i}`}
-                    cx={`${dot.x}%`}
-                    cy={`${dot.y}%`}
-                    r={dot.size}
+                    key={`shape-${i}`}
+                    cx={formatNumber(shape.x)}
+                    cy={formatNumber(shape.y)}
+                    r={formatNumber(shape.size)}
                     fill={dotColor}
                     fillOpacity={dotOpacity}
                   />
                 );
-              } else if (dot.shape === 1) {
+              } else if (shape.shape === 1) {
                 // Square
                 return animated ? (
                   <motion.rect
-                    key={`dot-${i}`}
-                    x={`${dot.x - dot.size/2}%`}
-                    y={`${dot.y - dot.size/2}%`}
-                    width={dot.size * 2}
-                    height={dot.size * 2}
+                    key={`shape-${i}`}
+                    x={formatNumber(shape.x - shape.size)}
+                    y={formatNumber(shape.y - shape.size)}
+                    width={formatNumber(shape.size * 2)}
+                    height={formatNumber(shape.size * 2)}
                     fill={dotColor}
                     fillOpacity={dotOpacity}
                     initial={{ opacity: 0, scale: 0 }}
@@ -161,32 +190,28 @@ export const ElegantBackground = React.forwardRef<
                     }}
                     transition={{
                       duration: 2,
-                      delay: dot.delay,
+                      delay: shape.delay,
                       ease: "easeInOut",
                     }}
                   />
                 ) : (
                   <rect
-                    key={`dot-${i}`}
-                    x={`${dot.x - dot.size/2}%`}
-                    y={`${dot.y - dot.size/2}%`}
-                    width={dot.size * 2}
-                    height={dot.size * 2}
+                    key={`shape-${i}`}
+                    x={formatNumber(shape.x - shape.size)}
+                    y={formatNumber(shape.y - shape.size)}
+                    width={formatNumber(shape.size * 2)}
+                    height={formatNumber(shape.size * 2)}
                     fill={dotColor}
                     fillOpacity={dotOpacity}
                   />
                 );
               } else {
-                // Triangle
-                const points = `
-                  ${dot.x}%,${dot.y - dot.size}% 
-                  ${dot.x - dot.size}%,${dot.y + dot.size}% 
-                  ${dot.x + dot.size}%,${dot.y + dot.size}%
-                `;
+                // Triangle - with properly formatted points
+                const points = getTrianglePoints(shape.x, shape.y, shape.size);
                 
                 return animated ? (
                   <motion.polygon
-                    key={`dot-${i}`}
+                    key={`shape-${i}`}
                     points={points}
                     fill={dotColor}
                     fillOpacity={dotOpacity}
@@ -197,13 +222,13 @@ export const ElegantBackground = React.forwardRef<
                     }}
                     transition={{
                       duration: 2,
-                      delay: dot.delay,
+                      delay: shape.delay,
                       ease: "easeInOut",
                     }}
                   />
                 ) : (
                   <polygon
-                    key={`dot-${i}`}
+                    key={`shape-${i}`}
                     points={points}
                     fill={dotColor}
                     fillOpacity={dotOpacity}
@@ -212,25 +237,6 @@ export const ElegantBackground = React.forwardRef<
               }
             })}
           </g>
-          
-          {/* Subtle curved accent lines */}
-          {[1, 2, 3].map((i) => (
-            <motion.path
-              key={`curve-${i}`}
-              d={`M0,${33 * i}% Q50%,${10 * i}% 100%,${40 * i}%`}
-              stroke={lineColor}
-              strokeWidth="2"
-              strokeOpacity={lineOpacity * 0.8}
-              fill="none"
-              initial={{ pathLength: 0 }}
-              animate={{ pathLength: 1 }}
-              transition={{
-                duration: 3,
-                delay: i * 0.5,
-                ease: "easeInOut",
-              }}
-            />
-          ))}
         </svg>
       </div>
     );

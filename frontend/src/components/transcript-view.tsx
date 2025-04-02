@@ -119,15 +119,15 @@ const TranscriptView: React.FC = () => {
     : segments;
 
   return (
-    <Card className="w-full overflow-hidden animate-fade-in bg-transparent border-none shadow-none">
-      <CardHeader className="pb-3 px-0">
+    <Card className="w-full glass animate-fade-in">
+      <CardHeader className="pb-3">
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <FileText size={18} className="text-blue-400" />
+            <FileText size={18} className="text-pod-dark-blue" />
             <span>Podcast Content</span>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="h-8 text-xs bg-slate-800/50 border-slate-700 hover:bg-slate-700/50">
+            <Button variant="outline" size="sm" className="h-8 text-xs bg-gray-900 border-gray-800 hover:bg-gray-800 text-white">
               <Download size={14} className="mr-1" />
               Export
             </Button>
@@ -135,27 +135,27 @@ const TranscriptView: React.FC = () => {
         </CardTitle>
       </CardHeader>
       <Tabs defaultValue="transcript">
-        <div className="mb-4">
-          <TabsList className="grid w-full grid-cols-2 p-1 bg-slate-800/70">
-            <TabsTrigger value="transcript" className="data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-400">
+        <div className="mb-4 px-6">
+          <TabsList className="grid w-full grid-cols-2 p-1 bg-gray-900">
+            <TabsTrigger value="transcript" className="data-[state=active]:bg-black data-[state=active]:text-white">
               <FileText size={14} className="mr-2" />
               Transcript
             </TabsTrigger>
-            <TabsTrigger value="summary" className="data-[state=active]:bg-purple-500/20 data-[state=active]:text-purple-400">
+            <TabsTrigger value="summary" className="data-[state=active]:bg-black data-[state=active]:text-white">
               <Sparkles size={14} className="mr-2" />
               Summary
             </TabsTrigger>
           </TabsList>
         </div>
-        <CardContent className="p-0">
+        <CardContent className="px-6">
           <TabsContent value="transcript" className="mt-0">
             <div className="mb-4 flex gap-2">
               <div className="relative flex-grow">
-                <Search size={16} className="absolute left-2.5 top-2.5 text-slate-400" />
+                <Search size={16} className="absolute left-2.5 top-2.5 text-gray-400" />
                 <Input 
                   type="text" 
                   placeholder="Search transcript..." 
-                  className="pl-9 bg-slate-800/50 border-slate-700 focus-visible:ring-blue-500"
+                  className="pl-9 bg-gray-900 border-gray-800 focus-visible:ring-gray-700"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -163,51 +163,54 @@ const TranscriptView: React.FC = () => {
               <Button 
                 variant="outline" 
                 size="icon" 
-                className={`h-10 w-10 ${showTimestamps ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' : 'bg-slate-800/50 border-slate-700'}`}
+                className={`h-10 w-10 ${showTimestamps ? 'bg-black text-white border-gray-800' : 'bg-gray-900 border-gray-800'}`}
                 onClick={() => setShowTimestamps(!showTimestamps)}
               >
                 <Clock size={16} />
               </Button>
             </div>
             
-            <div className="h-[500px] overflow-y-auto pr-2 space-y-4 transcript-container">
+            <div className="h-[400px] overflow-y-auto pr-2 space-y-4 transcript-container">
               {filteredSegments.map((segment, index) => (
                 <div 
                   key={index} 
-                  className="p-4 rounded-lg bg-gradient-to-r from-slate-800/70 to-slate-800/50 border border-slate-700/50 transition-all hover:border-slate-600/50"
+                  className="p-4 rounded-lg bg-white text-black border border-gray-200 shadow-subtle transition-all mx-2"
                 >
                   <div className="flex justify-between items-start mb-2">
                     <div className="flex items-center">
                       <div 
-                        className={`w-8 h-8 rounded-full flex items-center justify-center mr-2 text-sm font-medium ${
-                          segment.speaker === "Host" ? "bg-blue-500/20 text-blue-400" : "bg-purple-500/20 text-purple-400"
-                        }`}
+                        className={`w-8 h-8 rounded-full flex items-center justify-center mr-2 text-sm font-medium bg-gray-900 text-white`}
                       >
                         {segment.speaker[0]}
                       </div>
                       <div>
-                        <div className="font-medium text-white">{segment.speaker}</div>
+                        <div className="text-xs text-pod-dark-gray mb-1">
+                          SPEAKER
+                        </div>
+                        <div className="font-medium">{segment.speaker}</div>
                         {showTimestamps && (
-                          <div className="text-xs text-slate-400 flex items-center">
+                          <div className="text-xs text-gray-500 flex items-center mt-1">
                             <Clock size={12} className="mr-1" />
                             {formatTime(segment.start)} - {formatTime(segment.end)}
                           </div>
                         )}
                       </div>
                     </div>
-                    <div className="px-2 py-1 rounded-full bg-slate-700/50 text-xs font-medium text-slate-300 flex items-center">
+                    <div className="px-2 py-1 rounded-full bg-gray-100 text-xs font-medium text-gray-700 flex items-center">
                       <Tag size={10} className="mr-1" />
                       {segment.topic}
                     </div>
                   </div>
-                  <p className="text-sm leading-relaxed text-white/80 pl-10">
-                    {searchQuery ? highlightText(segment.text, searchQuery) : segment.text}
-                  </p>
+                  <div className="mt-2 pl-10">
+                    <p className="text-sm">
+                      {searchQuery ? highlightText(segment.text, searchQuery) : segment.text}
+                    </p>
+                  </div>
                 </div>
               ))}
               
               {filteredSegments.length === 0 && (
-                <div className="flex flex-col items-center justify-center h-40 text-slate-400">
+                <div className="flex flex-col items-center justify-center h-40 text-gray-400">
                   <Search size={48} className="mb-2 opacity-20" />
                   <p>No results found for "{searchQuery}"</p>
                   <Button 
@@ -222,25 +225,36 @@ const TranscriptView: React.FC = () => {
             </div>
           </TabsContent>
           <TabsContent value="summary" className="mt-0">
-            <div className="h-[500px] overflow-y-auto pr-2">
-              <div className="p-5 rounded-lg bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/20 mb-4">
-                <div className="flex items-center mb-3">
-                  <div className="p-2 rounded-full bg-purple-500/20 mr-2">
-                    <Sparkles size={16} className="text-purple-400" />
+            <div className="h-[400px] overflow-y-auto pr-2 px-2">
+              {currentPodcast.summary ? (
+                <div className="p-4 rounded-lg bg-white text-black shadow-subtle">
+                  <div className="flex items-center mb-3">
+                    <Sparkles size={16} className="text-pod-dark-blue mr-2" />
+                    <div className="text-xs text-pod-dark-gray">
+                      AI SUMMARY
+                    </div>
                   </div>
-                  <div className="text-sm font-medium text-purple-400">AI-GENERATED SUMMARY</div>
+                  <div className="space-y-4">
+                    {currentPodcast.summary.split('\n\n').map((paragraph, i) => (
+                      <p key={i} className="text-sm">
+                        {paragraph}
+                      </p>
+                    ))}
+                  </div>
                 </div>
-                <p className="text-sm leading-relaxed text-white/90">
-                  {currentPodcast.summary || 
-                    "In this podcast episode, the host and guest discuss the future of AI technology, covering its basic definition, recent evolution, and potential impact. The guest explains that AI systems perform tasks requiring human intelligence, such as visual perception and language processing. They note the remarkable advancement pace over the past five years, highlighting how large language models have transformed human-AI interaction."}
-                </p>
-              </div>
-              
-              <div className="space-y-4">
-                <div className="p-4 rounded-lg bg-slate-800/50 border border-slate-700/50">
+              ) : (
+                <div className="flex flex-col items-center justify-center h-40 text-gray-400">
+                  <Sparkles size={48} className="mb-2 opacity-20" />
+                  <p>No summary available</p>
+                </div>
+              )}
+              <div className="space-y-4 mt-8">
+                <div className="p-4 rounded-lg bg-white text-black shadow-subtle">
                   <div className="flex items-center mb-2">
                     <Tag size={14} className="text-blue-400 mr-2" />
-                    <div className="text-sm font-medium text-white">Key Topics</div>
+                    <div className="text-xs text-pod-dark-gray">
+                      KEY TOPICS
+                    </div>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <div className="px-3 py-1 rounded-full bg-blue-500/10 text-blue-400 text-xs font-medium">AI Basics</div>
@@ -250,19 +264,21 @@ const TranscriptView: React.FC = () => {
                   </div>
                 </div>
                 
-                <div className="p-4 rounded-lg bg-slate-800/50 border border-slate-700/50">
+                <div className="p-4 rounded-lg bg-white text-black shadow-subtle mb-8">
                   <div className="flex items-center mb-2">
                     <User size={14} className="text-blue-400 mr-2" />
-                    <div className="text-sm font-medium text-white">Speakers</div>
+                    <div className="text-xs text-pod-dark-gray">
+                      SPEAKERS
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center">
                       <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center text-xs font-medium text-blue-400 mr-2">H</div>
-                      <div className="text-sm text-white/80">Host (Primary Speaker)</div>
+                      <div className="text-sm text-gray-600">Host (Primary Speaker)</div>
                     </div>
                     <div className="flex items-center">
                       <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center text-xs font-medium text-purple-400 mr-2">G</div>
-                      <div className="text-sm text-white/80">Guest (AI Expert)</div>
+                      <div className="text-sm text-gray-600">Guest (AI Expert)</div>
                     </div>
                   </div>
                 </div>

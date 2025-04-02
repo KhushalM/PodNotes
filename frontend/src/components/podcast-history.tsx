@@ -4,6 +4,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { History, FileAudio, HelpCircle } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
+import { Headphones } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 
@@ -15,8 +16,10 @@ const PodcastHistory: React.FC = () => {
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <History size={18} className="text-pod-dark-blue" />
-            <span>Podcast History</span>
+            <h2 className="text-2xl font-semibold mb-4 text-black flex items-center">
+              <Headphones className="mr-2 text-black" size={24} />
+              Recent Podcasts
+            </h2> 
           </div>
           <div className="chip">
             {podcasts.length} {podcasts.length === 1 ? 'podcast' : 'podcasts'}

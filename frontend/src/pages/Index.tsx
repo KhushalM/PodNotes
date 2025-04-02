@@ -18,7 +18,7 @@ const MainContent = () => {
     return (
       <div className="w-full max-w-5xl mx-auto py-12 px-4">
         <div className="text-center mb-12 animate-fade-in">
-          <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-pod-black to-pod-rich-black text-transparent bg-clip-text">
+          <h1 className="text-4xl font-bold mb-4 text-black">
             Transform Podcasts into Knowledge
           </h1>
           <p className="text-foreground/70 text-lg max-w-2xl mx-auto leading-relaxed">
@@ -31,8 +31,8 @@ const MainContent = () => {
           <div className="flex flex-col justify-center">
             <div className="space-y-6">
               <div className="flex items-center space-x-3">
-                <div className="bg-pod-light-beige p-3 rounded-full">
-                  <FileAudio size={24} className="text-pod-black" />
+                <div className="bg-gray-900 p-3 rounded-full">
+                  <FileAudio size={24} className="text-white" />
                 </div>
                 <h3 className="text-xl font-semibold text-foreground">Upload Any Podcast</h3>
               </div>
@@ -42,8 +42,8 @@ const MainContent = () => {
               </p>
               
               <div className="flex items-center space-x-3">
-                <div className="bg-pod-light-beige p-3 rounded-full">
-                  <MessageSquare size={24} className="text-pod-black" />
+                <div className="bg-gray-900 p-3 rounded-full">
+                  <MessageSquare size={24} className="text-white" />
                 </div>
                 <h3 className="text-xl font-semibold text-foreground">Ask Questions</h3>
               </div>
@@ -53,8 +53,8 @@ const MainContent = () => {
               </p>
               
               <div className="flex items-center space-x-3">
-                <div className="bg-pod-light-beige p-3 rounded-full">
-                  <BookOpen size={24} className="text-pod-black" />
+                <div className="bg-gray-900 p-3 rounded-full">
+                  <BookOpen size={24} className="text-white" />
                 </div>
                 <h3 className="text-xl font-semibold text-foreground">Create Notes</h3>
               </div>
@@ -65,7 +65,7 @@ const MainContent = () => {
             </div>
           </div>
           
-          <div>
+          <div className="bg-black backdrop-blur-sm rounded-xl p-6 shadow-xl border border-gray-800">
             <UploadForm />
           </div>
         </div>
@@ -77,7 +77,7 @@ const MainContent = () => {
     return (
       <div className="w-full max-w-5xl mx-auto py-12 px-4">
         <div className="text-center mb-10 animate-fade-in">
-          <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-pod-black to-pod-rich-black text-transparent bg-clip-text">
+          <h1 className="text-4xl font-bold mb-4 text-black">
             Your Podcast Library
           </h1>
           <p className="text-foreground/70 text-lg max-w-2xl mx-auto">
@@ -86,16 +86,18 @@ const MainContent = () => {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="order-2 md:order-1">
-            <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-sm rounded-xl p-6 shadow-xl border border-slate-700/50">
-              <h2 className="text-2xl font-semibold mb-4 text-white flex items-center">
-                <Headphones className="mr-2 text-blue-400" size={24} />
+            <div className="bg-black backdrop-blur-sm rounded-xl p-6 shadow-xl border border-gray-800">
+              {/* <h2 className="text-2xl font-semibold mb-4 text-white flex items-center">
+                <Headphones className="mr-2 text-gray-300" size={24} />
                 Recent Podcasts
-              </h2>
+              </h2> */}
               <PodcastHistory />
             </div>
           </div>
           <div className="order-1 md:order-2">
-            <UploadForm />
+            <div className="bg-black backdrop-blur-sm rounded-xl p-6 shadow-xl border border-gray-800">
+              <UploadForm />
+            </div>
           </div>
         </div>
       </div>
@@ -104,7 +106,7 @@ const MainContent = () => {
 
   return (
     <div className="w-full max-w-7xl mx-auto py-8 px-4">
-      <div className="mb-8 animate-fade-in bg-gradient-to-br from-pod-black to-pod-rich-black backdrop-blur-sm rounded-xl p-6 shadow-xl border border-pod-black/50">
+      <div className="mb-8 animate-fade-in bg-black backdrop-blur-sm rounded-xl p-6 shadow-xl border border-gray-800">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <h1 className="text-2xl font-bold mb-2 text-white">{currentPodcast.name}</h1>
@@ -114,7 +116,7 @@ const MainContent = () => {
           </div>
           <Button 
             variant="outline" 
-            className="bg-pod-light-beige/10 border-pod-light-beige/30 hover:bg-pod-light-beige/20 text-pod-black"
+            className="bg-gray-900 border-gray-800 hover:bg-gray-800 text-white"
             onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })}
           >
             <Upload size={16} className="mr-2" />
@@ -125,19 +127,19 @@ const MainContent = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <div className="lg:col-span-3">
-          <div className="bg-gradient-to-br from-pod-light-beige/50 to-pod-black/50 backdrop-blur-sm rounded-xl shadow-xl border border-pod-black/30 overflow-hidden">
+          <div className="bg-black backdrop-blur-sm rounded-xl shadow-xl border border-gray-800 overflow-hidden">
             <Tabs defaultValue="transcript" className="w-full">
-              <TabsList className="w-full grid grid-cols-3 p-1 bg-pod-light-beige/50">
-                <TabsTrigger value="transcript" className="data-[state=active]:bg-pod-light-beige/20 data-[state=active]:text-pod-black">
-                  <FileAudio size={16} className="mr-2" />
+              <TabsList className="w-full grid grid-cols-3 p-1 bg-gray-900">
+                <TabsTrigger value="transcript" className="data-[state=active]:bg-black data-[state=active]:text-white text-gray-300 hover:text-white">
+                  <FileAudio size={16} className="mr-2 text-pod-dark-blue" />
                   Transcript
                 </TabsTrigger>
-                <TabsTrigger value="chat" className="data-[state=active]:bg-pod-black/20 data-[state=active]:text-pod-rich-black">
-                  <MessageSquare size={16} className="mr-2" />
+                <TabsTrigger value="chat" className="data-[state=active]:bg-black data-[state=active]:text-white text-gray-300 hover:text-white">
+                  <MessageSquare size={16} className="mr-2 text-pod-dark-blue" />
                   Ask Questions
                 </TabsTrigger>
-                <TabsTrigger value="notes" className="data-[state=active]:bg-pod-light-beige/20 data-[state=active]:text-pod-black">
-                  <BookOpen size={16} className="mr-2" />
+                <TabsTrigger value="notes" className="data-[state=active]:bg-black data-[state=active]:text-white text-gray-300 hover:text-white">
+                  <BookOpen size={16} className="mr-2 text-pod-dark-blue" />
                   Notes
                 </TabsTrigger>
               </TabsList>
@@ -155,14 +157,16 @@ const MainContent = () => {
         </div>
         <div>
           <div className="space-y-6 sticky top-20">
-            <div className="bg-gradient-to-br from-pod-light-beige/50 to-pod-black/50 backdrop-blur-sm rounded-xl p-6 shadow-xl border border-pod-black/30">
-              <h2 className="text-xl font-semibold mb-4 text-foreground flex items-center">
-                <Headphones className="mr-2 text-pod-black" size={20} />
+            <div className="bg-black backdrop-blur-sm rounded-xl p-6 shadow-xl border border-gray-800">
+              <h2 className="text-xl font-semibold mb-4 text-white flex items-center">
+                <Headphones className="mr-2 text-gray-300" size={20} />
                 Your Podcasts
               </h2>
               <PodcastHistory />
             </div>
-            <UploadForm />
+            <div className="bg-black backdrop-blur-sm rounded-xl p-6 shadow-xl border border-gray-800">
+              <UploadForm />
+            </div>
           </div>
         </div>
       </div>
@@ -175,10 +179,10 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     <div className="min-h-screen flex flex-col">
       <ElegantBackground 
         dotColor="#1E2124" 
-        dotOpacity={0.15}
+        dotOpacity={0.03}
         lineColor="#1E2124"
-        lineOpacity={0.08}
-        dotCount={60}
+        lineOpacity={0.02}
+        shapeCount={60}
       />
       <header className="sticky top-0 z-50 w-full backdrop-blur-sm border-b border-border/40 bg-background/80">
         <div className="container flex h-16 items-center">

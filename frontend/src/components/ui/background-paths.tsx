@@ -36,14 +36,19 @@ export const BackgroundPaths = React.forwardRef<
     },
     ref
   ) => {
-    // Simple pseudo-random number generator with seed
+    // Improved pseudo-random number generator with seed
     const random = (min: number, max: number, index: number) => {
       const x = Math.sin(seed + index) * 10000;
       const r = x - Math.floor(x);
       return min + r * (max - min);
     };
 
-    // Generate a random path with a given number of points
+    // Format number to fixed decimal places to ensure valid SVG path syntax
+    const formatNumber = (num: number): string => {
+      return num.toFixed(2);
+    };
+
+    // Generate a random path with a given number of points - improved for valid SVG syntax
     const generatePath = (index: number) => {
       const points = Math.floor(
         random(minPoints, maxPoints, index * 3 + 0.5)
@@ -52,7 +57,10 @@ export const BackgroundPaths = React.forwardRef<
       const startX = random(0, 100, index * 7 + 1.1);
       const startY = random(0, 100, index * 11 + 1.3);
 
-      let path = `M ${startX} ${startY}`;
+      // Start the path with properly formatted coordinates
+      let path = `M ${formatNumber(startX)} ${formatNumber(startY)}`;
+      
+      // Generate additional points with proper formatting
       for (let i = 1; i < points; i++) {
         const x = random(
           Math.max(0, startX - length / 2),
@@ -64,13 +72,22 @@ export const BackgroundPaths = React.forwardRef<
           Math.min(100, startY + length / 2),
           index * 19 + i * 23 + 1.7
         );
-        path += ` L ${x} ${y}`;
+        
+        // Ensure coordinates are valid numbers and properly formatted
+        if (!isNaN(x) && !isNaN(y)) {
+          path += ` L ${formatNumber(x)} ${formatNumber(y)}`;
+        }
       }
+      
       return path;
     };
 
-    // Generate paths
-    const paths = Array.from({ length: pathCount }, (_, i) => generatePath(i));
+    // Generate paths with validation
+    const paths = Array.from({ length: pathCount }, (_, i) => {
+      const path = generatePath(i);
+      // Validate path has at least a starting point
+      return path.startsWith('M ') ? path : `M 0 0`; 
+    });
 
     return (
       <div

@@ -162,7 +162,7 @@ const UploadForm: React.FC = () => {
               <FileAudio size={48} className="text-blue-400" />
             </div>
             <h3 className="text-xl font-semibold mb-2">Upload Your Podcast</h3>
-            <p className="text-white/70 mb-4">
+            <p className="text-black/70 mb-4">
               Drag and drop your audio file here, or click to browse
             </p>
             <div className="flex flex-wrap gap-2 justify-center mb-4">
@@ -184,10 +184,10 @@ const UploadForm: React.FC = () => {
 
   return (
     <Card 
-      className={`p-6 text-center animate-fade-in bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-sm rounded-xl shadow-xl border ${
+      className={`p-6 text-center animate-fade-in glass backdrop-blur-sm rounded-xl shadow-xl border ${
         dragActive 
           ? 'border-blue-500/50 ring-2 ring-blue-500/20' 
-          : 'border-slate-700/50'
+          : 'border-gray-800'
       }`}
     >
       <div

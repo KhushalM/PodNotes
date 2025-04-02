@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { askQuestion } from '@/services/api';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface Message {
   id: string;
@@ -178,6 +179,12 @@ const QASection: React.FC = () => {
     setShowChat(false);
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter') {
+      handleSubmit();
+    }
+  };
+
   // Suggested questions
   const suggestedQuestions = [
     "What is the main topic of this podcast?",
@@ -187,11 +194,11 @@ const QASection: React.FC = () => {
   ];
 
   return (
-    <Card className="w-full overflow-hidden animate-fade-in bg-transparent border-none shadow-none">
-      <CardHeader className="pb-3 px-0">
+    <Card className="w-full glass animate-fade-in">
+      <CardHeader className="pb-3">
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <MessageSquare size={18} className="text-green-400" />
+            <MessageSquare size={18} className="text-pod-dark-blue" />
             <span>Ask Questions</span>
           </div>
           {messages.length > 0 && showChat && (
@@ -201,204 +208,159 @@ const QASection: React.FC = () => {
               className="h-7 w-7 rounded-full hover:bg-slate-700/50"
               onClick={closeChat}
             >
-              <X size={16} />
+              <X size={14} />
             </Button>
           )}
         </CardTitle>
       </CardHeader>
-      <CardContent className="p-0">
-        <div className="h-[500px] flex flex-col">
-          {!showChat ? (
-            <div className="h-full flex flex-col items-center justify-center text-center p-6">
-              <div className="bg-gradient-to-r from-green-500/20 to-blue-500/20 p-4 rounded-full mb-4">
-                <MessageSquare size={32} className="text-green-400" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Ask About This Podcast</h3>
-              <p className="text-white/70 mb-6 max-w-md">
-                Ask any question about the podcast content and get AI-powered answers based on the transcript
-              </p>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 w-full max-w-lg">
+      <CardContent className="px-0">
+        {showChat ? (
+          messages.length === 0 ? (
+            <div className="mb-6">
+              <h3 className="text-sm font-medium mb-2">Suggested Questions</h3>
+              <div className="flex flex-wrap gap-2">
                 {suggestedQuestions.map((q, i) => (
-                  <Button 
+                  <button
                     key={i}
-                    variant="outline" 
-                    className="justify-start h-auto py-3 px-4 bg-slate-800/50 border-slate-700 hover:bg-slate-700/50 text-left"
-                    onClick={() => {
-                      setShowChat(true);
-                      handleSuggestedQuestion(q);
-                    }}
+                    className="bg-black text-white px-3 py-1.5 rounded-lg text-sm hover:bg-gray-900 transition-colors flex items-center"
+                    onClick={() => handleSuggestedQuestion(q)}
                   >
-                    <MessageSquare size={14} className="mr-2 flex-shrink-0 text-green-400" />
-                    <span className="truncate">{q}</span>
-                  </Button>
+                    <Sparkles size={12} className="mr-1.5 text-pod-dark-blue" />
+                    {q}
+                  </button>
                 ))}
               </div>
             </div>
           ) : (
-            <>
-              <div className="flex-grow overflow-y-auto pr-2 mb-4 space-y-4">
-                {messages.length === 0 ? (
-                  <div className="h-full flex flex-col items-center justify-center text-center p-6">
-                    <div className="bg-gradient-to-r from-green-500/20 to-blue-500/20 p-4 rounded-full mb-4">
-                      <MessageSquare size={32} className="text-green-400" />
-                    </div>
-                    <h3 className="text-xl font-semibold mb-2">Ask About This Podcast</h3>
-                    <p className="text-white/70 mb-6 max-w-md">
-                      Ask any question about the podcast content and get AI-powered answers based on the transcript
-                    </p>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 w-full max-w-lg">
-                      {suggestedQuestions.map((q, i) => (
-                        <Button 
-                          key={i}
-                          variant="outline" 
-                          className="justify-start h-auto py-3 px-4 bg-slate-800/50 border-slate-700 hover:bg-slate-700/50 text-left"
-                          onClick={() => handleSuggestedQuestion(q)}
-                        >
-                          <MessageSquare size={14} className="mr-2 flex-shrink-0 text-green-400" />
-                          <span className="truncate">{q}</span>
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  messages.map((message) => (
+            <ScrollArea className="h-[400px] pr-4">
+              <div className="flex flex-col gap-4 mb-4 px-6">
+                {messages.map((message) => (
+                  <div 
+                    key={message.id} 
+                    className={`flex flex-col ${message.role === 'user' ? 'items-end' : 'items-start'}`}
+                  >
                     <div 
-                      key={message.id} 
-                      className={`p-4 rounded-lg ${
-                        message.role === 'user' 
-                          ? 'bg-slate-800/70 border border-slate-700/50 ml-12' 
-                          : 'bg-gradient-to-r from-green-500/10 to-blue-500/10 border border-green-500/20 mr-12'
-                      }`}
+                      className={`max-w-[85%] rounded-lg p-4 animate-fade-in shadow-subtle
+                        ${message.role === 'user' 
+                          ? 'bg-gray-900 text-white' 
+                          : 'bg-white text-black'}`}
                     >
-                      <div className="flex items-start mb-2">
-                        <div 
-                          className={`w-8 h-8 rounded-full flex items-center justify-center mr-2 text-sm font-medium flex-shrink-0 ${
-                            message.role === 'user' 
-                              ? 'bg-blue-500/20 text-blue-400' 
-                              : 'bg-green-500/20 text-green-400'
-                          }`}
-                        >
-                          {message.role === 'user' ? 'Y' : 'A'}
-                        </div>
-                        <div className="flex-grow">
-                          <div className="font-medium text-white">
-                            {message.role === 'user' ? 'You' : 'AI Assistant'}
+                      <div className="flex items-start gap-3 mb-2">
+                        {message.role === 'user' ? (
+                          <div className="flex items-center text-xs text-gray-300 mb-1">
+                            YOU
                           </div>
-                          <div className="text-xs text-slate-400">
-                            {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </div>
-                        </div>
-                        
-                        {message.role === 'assistant' && (
-                          <div className="flex gap-1">
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-7 w-7 rounded-full hover:bg-slate-700/50"
-                              onClick={() => copyToClipboard(message.content)}
-                            >
-                              <Copy size={14} />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className={`h-7 w-7 rounded-full hover:bg-slate-700/50 ${message.saved ? 'text-yellow-400' : ''}`}
-                              onClick={() => handleFeedback(message.id, 'save')}
-                            >
-                              <Bookmark size={14} />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-7 w-7 rounded-full hover:bg-slate-700/50"
-                            >
-                              <Share2 size={14} />
-                            </Button>
+                        ) : (
+                          <div className="flex items-center text-xs text-pod-dark-gray mb-1">
+                            ASSISTANT
                           </div>
                         )}
                       </div>
+                      <p className={`${message.role === 'user' ? 'font-medium' : 'text-sm'}`}>
+                        {message.content}
+                      </p>
                       
-                      <div className="pl-10">
-                        <p className="text-sm leading-relaxed text-white/80 whitespace-pre-line">
-                          {message.content}
-                        </p>
+                      <div className="mt-2 flex items-center justify-between">
+                        <div className="text-xs text-gray-500">
+                          {message.timestamp.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                        </div>
                         
                         {message.role === 'assistant' && (
-                          <div className="mt-3 flex items-center gap-2">
-                            <div className="text-xs text-slate-400 mr-1">Was this helpful?</div>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className={`h-7 w-7 rounded-full hover:bg-slate-700/50 ${message.liked ? 'text-green-400 bg-green-500/10' : ''}`}
+                          <div className="flex items-center gap-3 mb-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 rounded-full hover:bg-gray-100"
                               onClick={() => handleFeedback(message.id, 'like')}
                             >
-                              <ThumbsUp size={14} />
+                              <ThumbsUp size={12} className={message.liked ? 'text-green-500' : 'text-gray-400'} />
                             </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className={`h-7 w-7 rounded-full hover:bg-slate-700/50 ${message.disliked ? 'text-red-400 bg-red-500/10' : ''}`}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 rounded-full hover:bg-gray-100"
                               onClick={() => handleFeedback(message.id, 'dislike')}
                             >
-                              <ThumbsDown size={14} />
+                              <ThumbsDown size={12} className={message.disliked ? 'text-red-500' : 'text-gray-400'} />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 rounded-full hover:bg-gray-100"
+                              onClick={() => copyToClipboard(message.content)}
+                            >
+                              <Copy size={12} className="text-gray-400" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 rounded-full hover:bg-gray-100"
+                              onClick={() => handleFeedback(message.id, 'save')}
+                            >
+                              <Bookmark size={12} className={message.saved ? 'text-pod-dark-blue fill-pod-dark-blue' : 'text-gray-400'} />
                             </Button>
                           </div>
                         )}
                       </div>
                     </div>
-                  ))
-                )}
-                
-                {isLoading && (
-                  <div className="p-4 rounded-lg bg-gradient-to-r from-green-500/10 to-blue-500/10 border border-green-500/20 mr-12">
-                    <div className="flex items-start mb-2">
-                      <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center mr-2 text-sm font-medium">
-                        <Sparkles size={14} className="text-green-400 animate-pulse" />
-                      </div>
-                      <div>
-                        <div className="font-medium text-white">AI Assistant</div>
-                        <div className="text-xs text-slate-400">Thinking...</div>
-                      </div>
-                    </div>
-                    <div className="pl-10">
-                      <div className="flex gap-1 items-center">
-                        <div className="h-2 w-2 rounded-full bg-green-400 animate-bounce"></div>
-                        <div className="h-2 w-2 rounded-full bg-green-400 animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                        <div className="h-2 w-2 rounded-full bg-green-400 animate-bounce" style={{ animationDelay: '0.4s' }}></div>
-                      </div>
-                    </div>
                   </div>
-                )}
+                ))}
               </div>
-              
-              <form onSubmit={handleSubmit} className="mt-auto">
-                <div className="relative">
-                  <Textarea 
-                    placeholder="Ask a question about this podcast..." 
-                    value={question}
-                    onChange={(e) => setQuestion(e.target.value)}
-                    className="min-h-[60px] resize-none bg-slate-800/50 border-slate-700 focus-visible:ring-green-500 pr-12"
-                    disabled={isLoading}
-                  />
-                  <Button 
-                    type="submit" 
-                    size="icon" 
-                    className={`absolute right-2 bottom-2 h-8 w-8 rounded-full ${
-                      question.trim() 
-                        ? 'bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600' 
-                        : 'bg-slate-700 hover:bg-slate-600'
-                    }`}
-                    disabled={!question.trim() || isLoading}
-                  >
-                    <Send size={14} className="text-white" />
-                  </Button>
-                </div>
-              </form>
-            </>
-          )}
-        </div>
+            </ScrollArea>
+          )
+        ) : (
+          <div className="h-full flex flex-col items-center justify-center text-center p-6">
+            <div className="bg-gradient-to-r from-green-500/20 to-blue-500/20 p-4 rounded-full mb-4">
+              <MessageSquare size={32} className="text-green-400" />
+            </div>
+            <h3 className="text-xl font-semibold mb-2">Ask About This Podcast</h3>
+            <p className="text-white/70 mb-6 max-w-md">
+              Ask any question about the podcast content and get AI-powered answers based on the transcript
+            </p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 w-full max-w-lg">
+              {suggestedQuestions.map((q, i) => (
+                <Button 
+                  key={i}
+                  variant="outline" 
+                  className="justify-start h-auto py-3 px-4 bg-slate-800/50 border-slate-700 hover:bg-slate-700/50 text-left"
+                  onClick={() => {
+                    setShowChat(true);
+                    handleSuggestedQuestion(q);
+                  }}
+                >
+                  <MessageSquare size={14} className="mr-2 flex-shrink-0 text-green-400" />
+                  <span className="truncate">{q}</span>
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
+        
+        <form onSubmit={handleSubmit} className="mt-auto">
+          <div className="flex items-center gap-2 mt-4 px-6">
+            <Textarea 
+              placeholder="Ask a question about this podcast..." 
+              value={question}
+              onChange={(e) => setQuestion(e.target.value)}
+              onKeyDown={handleKeyDown}
+              className="flex-grow bg-gray-700/30 border-gray-600 focus-visible:ring-gray-500 text-white min-h-[60px] resize-none"
+              disabled={isLoading}
+            />
+            <Button 
+              type="submit" 
+              size="icon" 
+              className={`h-8 w-8 rounded-full ${
+                question.trim() 
+                  ? 'bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600' 
+                  : 'bg-slate-700 hover:bg-slate-600'
+              }`}
+              disabled={!question.trim() || isLoading}
+            >
+              <Send size={14} className="text-white" />
+            </Button>
+          </div>
+        </form>
       </CardContent>
     </Card>
   );
