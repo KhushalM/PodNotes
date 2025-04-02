@@ -18,4 +18,4 @@ echo "Using OpenSearch at: $OPENSEARCH_DOMAIN_ENDPOINT"
 echo "Using Python: $(which python)"
 
 # Start the server
-uvicorn main:app --reload --port 8000
+uvicorn main:app --reload --port 8001

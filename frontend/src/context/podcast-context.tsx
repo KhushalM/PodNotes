@@ -1,28 +1,14 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import { PodcastContext, PodcastContextType } from './podcast-context-types';
 import { Podcast, ChatMessage, Note, ApiError } from '@/types';
+import { uploadPodcastFile, checkBackendAvailability, askQuestion } from '@/services/api';
 import { toast } from 'sonner';
-import { uploadPodcastFile, askQuestion as apiAskQuestion } from '@/services/api';
 
-interface PodcastContextType {
-  podcasts: Podcast[];
-  currentPodcast: Podcast | null;
-  isLoading: boolean;
-  error: ApiError | null;
-  chatMessages: ChatMessage[];
-  notes: Note[];
-  uploadPodcast: (file: File) => Promise<void>;
-  selectPodcast: (id: string) => void;
-  sendChatMessage: (message: string) => Promise<void>;
-  saveNote: (question: string, answer: string) => void;
-  clearChat: () => void;
-}
-
-const PodcastContext = createContext<PodcastContextType | undefined>(undefined);
-
+// Create the provider
 export const PodcastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [podcasts, setPodcasts] = useState<Podcast[]>([]);
   const [currentPodcast, setCurrentPodcast] = useState<Podcast | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
@@ -59,9 +45,34 @@ export const PodcastProvider: React.FC<{ children: React.ReactNode }> = ({ child
       console.log(`Calling uploadPodcastFile API with file: ${file.name} (${file.size} bytes)`);
       // Call the real API function
       const newPodcast = await uploadPodcastFile(file);
-      console.log("Upload API call completed successfully:", newPodcast);
+      console.log("Upload API call completed successfully, received podcast:", newPodcast);
+      console.log("Transcript type:", typeof newPodcast.transcript);
+      console.log("Summary type:", typeof newPodcast.summary);
       
-      setPodcasts(prev => [newPodcast, ...prev]);
+      // Check if we received actual data or mock data
+      const isMockData = !newPodcast.transcript || 
+                         (typeof newPodcast.transcript === 'string' && 
+                          newPodcast.transcript.includes("sample transcript"));
+      
+      if (isMockData) {
+        console.warn("Received mock data from API, this may indicate a backend connection issue");
+      } else {
+        console.log("Received real podcast data from backend");
+      }
+      
+      // Update state with the new podcast
+      setPodcasts(prev => {
+        // Check if podcast with same ID already exists
+        const exists = prev.some(p => p.id === newPodcast.id);
+        if (exists) {
+          console.log(`Podcast with ID ${newPodcast.id} already exists, updating it`);
+          return prev.map(p => p.id === newPodcast.id ? newPodcast : p);
+        } else {
+          console.log(`Adding new podcast with ID ${newPodcast.id}`);
+          return [newPodcast, ...prev];
+        }
+      });
+      
       setCurrentPodcast(newPodcast);
       setChatMessages([]);
       
@@ -103,7 +114,7 @@ export const PodcastProvider: React.FC<{ children: React.ReactNode }> = ({ child
     
     try {
       // Call the real API function
-      const response = await apiAskQuestion(currentPodcast.id, message);
+      const response = await askQuestion(currentPodcast.id, message);
       
       // Create AI response message
       const aiResponse: ChatMessage = {
@@ -163,10 +174,4 @@ export const PodcastProvider: React.FC<{ children: React.ReactNode }> = ({ child
   );
 };
 
-export const usePodcast = (): PodcastContextType => {
-  const context = useContext(PodcastContext);
-  if (context === undefined) {
-    throw new Error('usePodcast must be used within a PodcastProvider');
-  }
-  return context;
-};
+export type { PodcastContextType };

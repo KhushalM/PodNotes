@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Headphones } from 'lucide-react';
 
@@ -25,8 +24,8 @@ const Logo: React.FC<LogoProps> = ({ size = 'md' }) => {
         <Headphones size={iconSizes[size]} className="animate-float" />
       </div>
       <h1 className={`font-display font-semibold ${sizeClasses[size]}`}>
-        <span className="text-white">Pod</span>
-        <span className="text-gradient">Notes</span>
+        <span className="text-pod-rich-black">Pod</span>
+        <span className="text-pod-rich-black">Notes</span>
       </h1>
     </div>
   );

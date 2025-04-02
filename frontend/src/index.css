@@ -1,4 +1,3 @@
-
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
@@ -7,47 +6,57 @@
 
 @layer base {
   :root {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
+    --background: 100 50% 97%;
+    --foreground: 240 10% 3.9%;
 
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
+    --card: 50 50% 97%;
+    --card-foreground: 240 10% 3.9%;
 
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 50 50% 97%;
+    --popover-foreground: 240 10% 3.9%;
 
-    --primary: 350 100% 60%;
-    --primary-foreground: 0 0% 98%;
+    --primary: 220 13% 18%;
+    --primary-foreground: 50 50% 97%;
 
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 36 20% 92%;
+    --secondary-foreground: 240 5.9% 10%;
 
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
+    --muted: 36 20% 92%;
+    --muted-foreground: 240 3.8% 46.1%;
 
-    --accent: 310 90% 60%;
-    --accent-foreground: 0 0% 98%;
+    --accent: 220 13% 28%;
+    --accent-foreground: 50 50% 97%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 310 90% 60%;
+    --border: 36 20% 87%;
+    --input: 36 20% 87%;
+    --ring: 220 13% 18%;
 
     --radius: 0.75rem;
+    
+    /* Sidebar specific variables */
+    --sidebar-background: 220 13% 18%;
+    --sidebar-foreground: 50 50% 97%;
+    --sidebar-primary: 220 13% 18%;
+    --sidebar-primary-foreground: 50 50% 97%;
+    --sidebar-accent: 220 13% 28%;
+    --sidebar-accent-foreground: 50 50% 97%;
+    --sidebar-border: 36 20% 87%;
+    --sidebar-ring: 220 13% 18%;
   }
 
   .glass {
-    background: rgba(29, 32, 35, 0.7);
+    background: rgba(240, 235, 225, 0.7);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(50, 40, 30, 0.1);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
   }
 
   .glass-dark {
-    background: rgba(29, 32, 35, 0.7);
+    background: rgba(50, 40, 30, 0.8);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -64,12 +73,12 @@
   }
 
   .subtle-scroll::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(50, 40, 30, 0.2);
     border-radius: 3px;
   }
 
   .subtle-scroll::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.3);
+    background: rgba(50, 40, 30, 0.3);
   }
 }
 
@@ -80,7 +89,7 @@
 
   body {
     @apply bg-background text-foreground font-sans;
-    background-image: radial-gradient(circle at 50% 60%, rgba(217, 70, 239, 0.05) 0%, rgba(29, 32, 35, 0) 60%);
+    background-image: radial-gradient(circle at 50% 60%, rgba(30, 33, 36, 0.05) 0%, rgba(247, 245, 237, 0) 60%);
     background-size: 100% 100%;
     background-attachment: fixed;
   }
@@ -96,22 +105,22 @@
   }
 
   .btn-primary {
-    @apply bg-gradient-to-r from-pod-gradient-start to-pod-gradient-end text-white rounded-md px-4 py-2 font-medium transition-all hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-pod-pink focus:ring-opacity-50;
+    @apply bg-gradient-to-r from-accent to-secondary text-foreground rounded-md px-4 py-2 font-medium transition-all hover:brightness-95 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-opacity-50;
   }
 
   .btn-secondary {
-    @apply bg-secondary text-white border border-white/10 rounded-md px-4 py-2 font-medium transition-all hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-pod-pink focus:ring-opacity-50;
+    @apply bg-secondary text-foreground border border-border rounded-md px-4 py-2 font-medium transition-all hover:bg-primary focus:outline-none focus:ring-2 focus:ring-accent focus:ring-opacity-50;
   }
 
   .chip {
-    @apply inline-block bg-white/10 text-white text-xs px-2 py-1 rounded-full font-medium;
+    @apply inline-block bg-secondary text-foreground text-xs px-2 py-1 rounded-full font-medium;
   }
 
   .text-gradient {
-    @apply bg-gradient-to-r from-pod-gradient-start to-pod-gradient-end bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-accent to-secondary bg-clip-text text-transparent;
   }
 }
 
 .logo-glow {
-  filter: drop-shadow(0 0 5px rgba(217, 70, 239, 0.5));
+  filter: drop-shadow(0 0 5px rgba(225, 215, 200, 0.5));
 }

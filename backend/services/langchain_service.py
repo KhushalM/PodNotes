@@ -30,8 +30,7 @@ os.makedirs(VECTOR_STORE_DIR, exist_ok=True)
 
 def get_llm():
     model_name = "gemma3:4b"
-    callback_manager = CallbackManager([StreamingStdOutCallbackHandler()])
-    return Ollama(model=model_name, callback_manager=callback_manager)
+    return Ollama(model=model_name)
 
 def summarize_podcast(transcript):
     from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -42,16 +41,34 @@ def summarize_podcast(transcript):
     # Initialize the LLM
     llm = get_llm()
     
+    # Extract text content if transcript is a dictionary
+    text_content = ""
+    if isinstance(transcript, dict):
+        # Try to get the text content from different possible fields
+        if "text" in transcript:
+            text_content = transcript["text"]
+        elif "timestamped_text" in transcript:
+            text_content = transcript["timestamped_text"]
+        elif "segments" in transcript and transcript["segments"]:
+            # Concatenate text from segments
+            text_content = " ".join([segment.get("text", "") for segment in transcript["segments"]])
+        else:
+            # If no recognizable format, convert to string
+            text_content = str(transcript)
+    else:
+        # If transcript is already a string, use it directly
+        text_content = transcript
+    
     # Check if transcript is short enough for direct summarization
-    if len(transcript) < 10000:
+    if len(text_content) < 10000:
         logger.info("Transcript is short enough for direct summarization")  # Approximate character count for context window
         summarizer = load_summarize_chain(llm, chain_type="stuff")
-        return summarizer.run([Document(page_content=transcript)])
+        return summarizer.run([Document(page_content=text_content)])
     
     # For longer transcripts, use map-reduce
     logger.info("Transcript is too long for direct summarization, using map-reduce")
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=2000, chunk_overlap=200)
-    docs = text_splitter.create_documents([transcript])
+    docs = text_splitter.create_documents([text_content])
     
     summarizer = load_summarize_chain(llm, chain_type="map_reduce")
     return summarizer.run(docs)
@@ -163,10 +180,13 @@ def ask_question(question, podcast_id):
     from langchain.prompts import PromptTemplate
     
     qa_template = """You are a helpful assistant answering questions about a podcast.
-    Use the following pieces of context to answer the question at the end.
+    Use the following pieces of context to answer the question at the end. You are talking to the user directly.
     If you don't know the answer, just say that you don't know, don't try to make up an answer.
     Keep your answers direct and to the point without evaluating your own response.
     Do not include phrases like "based on the context" or "according to the transcript".
+    Never respond as if you're reviewing or evaluating an answer.
+    Never start with phrases like "That's a fantastic explanation" or "Here's a breakdown".
+    Just answer the question directly as if you are having a conversation with the user.
     
     Context: {context}
     
@@ -184,7 +204,10 @@ def ask_question(question, podcast_id):
         llm=llm,
         retriever=retriever,
         memory=memory,
-        combine_docs_chain_kwargs={"prompt": QA_PROMPT}
+        combine_docs_chain_kwargs={"prompt": QA_PROMPT},
+        return_source_documents=False,
+        return_generated_question=False,
+        verbose=False
     )
     
     # Get response

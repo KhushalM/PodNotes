@@ -24,7 +24,7 @@ app.add_middleware(
 
 # Import AWS services with error handling
 try:
-    from services.aws_service import upload_file_to_s3, save_podcast_to_dynamodb, table, aws_available
+    from services.aws_service import upload_file_to_s3, save_podcast_to_dynamodb, table, aws_available, convert_floats_to_decimals
     
     # Try to import services that depend on numpy, but don't fail if they're not available
     try:
@@ -58,7 +58,7 @@ except Exception as e:
     
     # Define dummy functions for all services
     def upload_file_to_s3(file_name, bucket, object_name=None): return "mock-s3-url"
-    def save_podcast_to_dynamodb(podcast_id, type, content, timestamp): return True
+    def save_podcast_to_dynamodb(podcast_id, content_type, content, timestamp): return True
     def transcribe_audio(audio_file_path): return "Mock transcription text"
     def summarise_podcast(transcript): return "Mock summary of podcast"
     def langchain_ask_question(question, podcast_id): return "Mock answer to your question"
@@ -70,26 +70,32 @@ except Exception as e:
 
 # Enable mock mode for testing without AWS services
 MOCK_MODE = os.environ.get('MOCK_MODE', 'false').lower() == 'true'
-# Check if we're in local mode
-IS_LOCAL = os.environ.get('IS_LOCAL', 'true').lower() == 'true'
+logger.info(f"MOCK_MODE environment variable: {os.environ.get('MOCK_MODE', 'not set')}")
+logger.info(f"MOCK_MODE: {MOCK_MODE}")
+
+if not aws_available:
+    logger.warning("AWS services are not available. Enabling MOCK_MODE automatically.")
+    MOCK_MODE = True
 
 if MOCK_MODE:
     logger.info("Running in MOCK_MODE - AWS services will be simulated")
 
-# If AWS is not available and we're not in mock mode, enable mock mode automatically
-if not aws_available and not MOCK_MODE:
-    logger.warning("AWS services are not available. Enabling MOCK_MODE automatically.")
-    MOCK_MODE = True
+# Check if we're in local mode
+IS_LOCAL = os.environ.get('IS_LOCAL', 'true').lower() == 'true'
 
-@app.get("/test")
-async def test_endpoint():
-    """Simple endpoint to test if the API is working"""
-    logger.info("Test endpoint called!")
+@app.get("/")
+@app.head("/")
+async def root():
+    """
+    Simple root endpoint to check if the backend is available.
+    
+    Returns:
+        dict: Status information about the backend
+    """
     return {
-        "status": "ok", 
-        "message": "Backend API is working!",
-        "aws_available": aws_available,
-        "mock_mode": MOCK_MODE
+        "status": "ok",
+        "message": "PodNotes API is running",
+        "timestamp": datetime.datetime.now().isoformat()
     }
 
 @app.post("/upload/")
@@ -121,38 +127,49 @@ async def upload_file(file: UploadFile = File(...), mock: bool = Form(False)):
         else:
             transcript = transcribe_audio(temp_file_path)
         
-        # Save transcript to DynamoDB
-        table = dynamodb.Table("Podcasts")
+        # Use object_name as the PodcastID, but sanitize it for DynamoDB
+        # Replace spaces and special characters that might cause issues
+        original_filename = file.filename
+        podcast_id = original_filename #replace(" ", "_").replace(".", "_")
+        logger.info(f"Using sanitized podcast ID: {podcast_id} (from {original_filename})")
         
-        # Use object_name as the PodcastID
-        podcast_id = file.filename
+        # Handle both dictionary and string transcript formats
+        transcript_content = transcript
+        if isinstance(transcript, dict):
+            if "timestamped_text" in transcript:
+                transcript_content = transcript["timestamped_text"]
+            elif "text" in transcript:
+                transcript_content = transcript["text"]
+        
+        # No need for manual float conversion as save_podcast_to_dynamodb now handles this
+        # with convert_floats_to_decimals
         
         # Save transcript to DynamoDB
-        aws_service.save_podcast_to_dynamodb(
+        save_podcast_to_dynamodb(
             podcast_id=podcast_id,
             content_type="transcript",
-            content=transcript
+            content=transcript_content
         )
         
         # Set up vector store
-        vector_store = setup_opensearch_vector_store(transcript, podcast_id)
+        vector_store = setup_opensearch_vector_store(transcript_content, podcast_id)
         logger.info("Vector store setup completed")
         
         # Generate summary
         logger.info("Generating summary...")
-        summary = summarise_podcast(transcript)
+        summary = summarise_podcast(transcript_content)
         logger.info("Summary generated")
         
         # Save summary to DynamoDB
         logger.info("Saving summary to DynamoDB...")
-        aws_service.save_podcast_to_dynamodb(podcast_id=podcast_id, content_type="summary", content=summary)
+        save_podcast_to_dynamodb(podcast_id=podcast_id, content_type="summary", content=summary)
         logger.info("Summary saved to DynamoDB")
         
         # Clean up
         os.remove(temp_file_path)
         logger.info(f"Removed temporary file: {temp_file_path}")
         
-        return {"transcript": transcript, "summary": summary}
+        return {"transcript": transcript_content, "summary": summary}
     except Exception as e:
         logger.error(f"Error processing upload: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))

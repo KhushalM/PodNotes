@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { usePodcast } from '@/context/podcast-context';
+import { usePodcast } from '@/hooks/use-podcast';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { History, FileAudio, HelpCircle } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';

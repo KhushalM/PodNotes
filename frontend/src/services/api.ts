@@ -3,8 +3,8 @@ import { Podcast, ApiError } from '@/types';
 // Determine the correct API URL based on the environment
 // This helps handle different development environments
 const getApiUrl = () => {
-  // Default to port 8000 for the backend
-  return 'http://localhost:8000';
+  // Default to port 8001 for the backend
+  return 'http://localhost:8001';
 };
 
 const API_URL = getApiUrl();
@@ -14,45 +14,27 @@ console.log(`API URL set to: ${API_URL}`);
 let useMockData = false;
 
 // Check if backend is available
-const checkBackendAvailability = async () => {
-  console.log(`Checking backend availability at ${API_URL}/test...`);
+export const checkBackendAvailability = async () => {
+  console.log(`Checking backend availability...`);
   try {
-    const response = await fetch(`${API_URL}/test`, {
-      method: 'GET',
+    // Use the root endpoint with HEAD request which is now working
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    
+    const response = await fetch(`${API_URL}/`, {
+      method: 'HEAD',
       credentials: 'include',
-      headers: {
-        'Accept': 'application/json',
-      },
-      // Add a timeout to avoid hanging
-      signal: AbortSignal.timeout(5000)
+      signal: controller.signal
     });
     
-    console.log(`Backend test response status: ${response.status}`);
+    clearTimeout(timeoutId);
+    console.log(`Backend connection status: ${response.status}`);
     
-    if (response.ok) {
-      try {
-        const data = await response.json();
-        console.log('Backend test response data:', data);
-        
-        // If we're in mock mode on the backend, log it
-        if (data.mock_mode) {
-          console.log('Backend is running in MOCK_MODE');
-        }
-        
-        useMockData = false;
-        return true;
-      } catch (parseError) {
-        console.warn('Error parsing backend response:', parseError);
-        useMockData = false;
-        return true; // Still consider backend available if we got an OK response
-      }
-    } else {
-      console.warn(`Backend returned error status: ${response.status}`);
-      useMockData = true;
-      return false;
-    }
+    // If we can connect to the backend at all, consider it available
+    useMockData = false;
+    return true;
   } catch (error) {
-    console.warn('Backend is not available, using mock data:', error);
+    console.warn('Backend connection failed:', error);
     useMockData = true;
     return false;
   }
