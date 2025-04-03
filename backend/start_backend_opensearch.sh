@@ -12,6 +12,7 @@ fi
 # Set environment variables
 export IS_LOCAL=false
 export MOCK_MODE=false
+export DIARIZATION=false
 
 # OpenSearch configuration
 # These should be set in your .env file, not hardcoded here

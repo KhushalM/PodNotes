@@ -135,16 +135,9 @@ async def upload_file(file: UploadFile = File(...), mock: bool = Form(False)):
         
         # Handle both dictionary and string transcript formats
         transcript_content = transcript
-        if isinstance(transcript, dict):
-            if "timestamped_text" in transcript:
-                transcript_content = transcript["timestamped_text"]
-            elif "text" in transcript:
-                transcript_content = transcript["text"]
-        
-        # No need for manual float conversion as save_podcast_to_dynamodb now handles this
-        # with convert_floats_to_decimals
-        
+    
         # Save transcript to DynamoDB
+
         save_podcast_to_dynamodb(
             podcast_id=podcast_id,
             content_type="transcript",

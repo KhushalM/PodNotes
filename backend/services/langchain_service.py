@@ -41,37 +41,137 @@ def summarize_podcast(transcript):
     # Initialize the LLM
     llm = get_llm()
     
-    # Extract text content if transcript is a dictionary
-    text_content = ""
-    if isinstance(transcript, dict):
-        # Try to get the text content from different possible fields
-        if "text" in transcript:
-            text_content = transcript["text"]
-        elif "timestamped_text" in transcript:
-            text_content = transcript["timestamped_text"]
-        elif "segments" in transcript and transcript["segments"]:
-            # Concatenate text from segments
-            text_content = " ".join([segment.get("text", "") for segment in transcript["segments"]])
+    # If the transcript is already a list of segments, split by speaker
+    if isinstance(transcript, list):
+        # Check if we have speaker information
+        has_speakers = any(segment.get("speaker") for segment in transcript if segment)
+        
+        if has_speakers:
+            # Group segments by speaker
+            speaker_segments = {}
+            for segment in transcript:
+                speaker = segment.get("speaker", "Unknown")
+                if speaker not in speaker_segments:
+                    speaker_segments[speaker] = []
+                speaker_segments[speaker].append(segment)
+            
+            # Create documents for each speaker's content
+            docs = []
+            for speaker, segments in speaker_segments.items():
+                # Format the segments for this speaker
+                formatted_segments = []
+                for segment in segments:
+                    start_time = segment.get("start", "")
+                    end_time = segment.get("end", "")
+                    text = segment.get("text", "")
+                    formatted_text = f"[{start_time} - {end_time}] {text}"
+                    formatted_segments.append(formatted_text)
+                
+                # Create a document for this speaker
+                speaker_content = f"Speaker: {speaker}\n" + "\n".join(formatted_segments)
+                docs.append(Document(page_content=speaker_content))
+            
+            logger.info(f"Split transcript into {len(docs)} speaker-based documents")
         else:
-            # If no recognizable format, convert to string
-            text_content = str(transcript)
+            # Fallback: Split by time chunks if no speaker information
+            logger.info("No speaker information found, splitting by time chunks instead")
+            
+            # Group segments into time chunks (e.g., 5-minute chunks)
+            chunk_duration = 120  # 2 minutes in seconds
+            time_chunks = {}
+            
+            for segment in transcript:
+                # Get start time in seconds
+                start_time = segment.get("start", "0")
+                if isinstance(start_time, str):
+                    # Convert "HH:MM:SS" to seconds
+                    parts = start_time.split(":")
+                    if len(parts) == 3:
+                        start_seconds = int(parts[0]) * 3600 + int(parts[1]) * 60 + float(parts[2])
+                    else:
+                        start_seconds = 0
+                else:
+                    start_seconds = float(start_time)
+                
+                # Determine which chunk this segment belongs to
+                chunk_index = int(start_seconds / chunk_duration)
+                if chunk_index not in time_chunks:
+                    time_chunks[chunk_index] = []
+                time_chunks[chunk_index].append(segment)
+            
+            # Create documents for each time chunk
+            docs = []
+            for chunk_idx, segments in sorted(time_chunks.items()):
+                # Format the segments for this time chunk
+                formatted_segments = []
+                for segment in segments:
+                    start_time = segment.get("start", "")
+                    end_time = segment.get("end", "")
+                    text = segment.get("text", "")
+                    formatted_text = f"[{start_time} - {end_time}] {text}"
+                    formatted_segments.append(formatted_text)
+                
+                # Calculate the time range for this chunk
+                chunk_start = chunk_idx * chunk_duration
+                chunk_end = (chunk_idx + 1) * chunk_duration
+                chunk_start_fmt = f"{int(chunk_start/3600):02d}:{int((chunk_start%3600)/60):02d}:{int(chunk_start%60):02d}"
+                chunk_end_fmt = f"{int(chunk_end/3600):02d}:{int((chunk_end%3600)/60):02d}:{int(chunk_end%60):02d}"
+                
+                # Create a document for this time chunk
+                chunk_content = f"Time segment: {chunk_start_fmt} - {chunk_end_fmt}\n" + "\n".join(formatted_segments)
+                docs.append(Document(page_content=chunk_content))
+            
+            logger.info(f"Split transcript into {len(docs)} time-based chunks")
     else:
-        # If transcript is already a string, use it directly
-        text_content = transcript
+        # Fall back to character-based splitting for string transcripts
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=2000, chunk_overlap=200)
+        docs = text_splitter.create_documents([transcript])
     
-    # Check if transcript is short enough for direct summarization
-    if len(text_content) < 10000:
-        logger.info("Transcript is short enough for direct summarization")  # Approximate character count for context window
-        summarizer = load_summarize_chain(llm, chain_type="stuff")
-        return summarizer.run([Document(page_content=text_content)])
+    # Define the prompts for the refine chain
+    from langchain.prompts import PromptTemplate
     
-    # For longer transcripts, use map-reduce
-    logger.info("Transcript is too long for direct summarization, using map-reduce")
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=2000, chunk_overlap=200)
-    docs = text_splitter.create_documents([text_content])
+    # Initial prompt to create a summary from the first document
+    initial_prompt_template = """
+    You are a helpful assistant summarizing a podcast transcript.
     
-    summarizer = load_summarize_chain(llm, chain_type="map_reduce")
-    return summarizer.run(docs)
+    Write a detailed summary of the following podcast transcript segment:
+    
+    {text}
+    
+    SUMMARY:
+    """
+    initial_prompt = PromptTemplate(template=initial_prompt_template, input_variables=["text"])
+    
+    # Refine prompt to iteratively improve the summary with each new document
+    refine_prompt_template = """
+    You are a helpful assistant summarizing a podcast transcript.
+    
+    We have provided an existing summary of a podcast transcript:
+    {existing_answer}
+    
+    We have a new segment of the podcast transcript that needs to be incorporated:
+    {text}
+    
+    Given this new information, refine the existing summary to create an updated, comprehensive summary of the podcast. 
+    If the new segment introduces new speakers, topics, or important points, be sure to include them. Also include new topics.
+    
+    REFINED SUMMARY:
+    """
+    refine_prompt = PromptTemplate(template=refine_prompt_template, input_variables=["existing_answer", "text"])
+    
+    # Create and run the refine chain
+    logger.info("Using refine chain for summarization")
+    summarizer = load_summarize_chain(
+        llm,
+        chain_type="refine",
+        question_prompt=initial_prompt,
+        refine_prompt=refine_prompt,
+        return_intermediate_steps=False,
+        input_key="input_documents",
+        output_key="output_text"
+    )
+    result = summarizer({"input_documents": docs}, return_only_outputs=True)
+    return result["output_text"]
 
 # Add an alias for the summarize_podcast function to match what's being imported in main.py
 summarise_podcast = summarize_podcast
@@ -180,7 +280,8 @@ def ask_question(question, podcast_id):
     from langchain.prompts import PromptTemplate
     
     qa_template = """You are a helpful assistant answering questions about a podcast.
-    Use the following pieces of context to answer the question at the end. You are talking to the user directly.
+    Use the following pieces of context which is a transcript for a podcast formatted into a list of segments which contain start and end times, speaker, and text 
+    to answer the question at the end. You are talking to the user directly.
     If you don't know the answer, just say that you don't know, don't try to make up an answer.
     Keep your answers direct and to the point without evaluating your own response.
     Do not include phrases like "based on the context" or "according to the transcript".

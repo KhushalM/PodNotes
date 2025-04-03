@@ -24,6 +24,15 @@ const TranscriptView: React.FC = () => {
     topic: string;
   }
 
+  // Define interface for our new transcript format (array of segments)
+  interface TranscriptSegmentItem {
+    start: string | number;
+    end: string | number;
+    speaker: string;
+    text: string;
+    topic?: string;
+  }
+
   interface StructuredTranscript {
     segments?: TranscriptSegment[];
     text?: string;
@@ -52,6 +61,21 @@ const TranscriptView: React.FC = () => {
         text: currentPodcast.transcript,
         topic: "Transcript"
       }];
+    }
+    
+    // If transcript is an array (our new format)
+    if (Array.isArray(currentPodcast.transcript)) {
+      console.log("Transcript is an array of segments");
+      // Explicitly type the transcript as an array of our segment items
+      const typedTranscript: TranscriptSegmentItem[] = currentPodcast.transcript;
+      console.log("Typed transcript:", currentPodcast.transcript);
+      return typedTranscript.map((segment) => ({
+        start: typeof segment.start === 'string' ? parseTimeToSeconds(segment.start) : segment.start || 0,
+        end: typeof segment.end === 'string' ? parseTimeToSeconds(segment.end) : segment.end || 0,
+        speaker: String(segment.speaker) || "Speaker",
+        text: String(segment.text) || "",
+        topic: String(segment.topic) || "Transcript"
+      }));
     }
     
     // If transcript is an object with segments
@@ -84,9 +108,29 @@ const TranscriptView: React.FC = () => {
       }
     }
     
-    // Fallback to empty array if format is unknown
-    console.warn("Unknown transcript format, returning empty array");
+    console.log("Unknown transcript format, returning empty array");
     return [];
+  };
+  
+  // Helper function to convert time format (HH:MM:SS) to seconds
+  const parseTimeToSeconds = (timeStr: string): number => {
+    if (!timeStr) return 0;
+    
+    try {
+      const parts = timeStr.split(':').map(Number);
+      if (parts.length === 3) {
+        // HH:MM:SS format
+        return parts[0] * 3600 + parts[1] * 60 + parts[2];
+      } else if (parts.length === 2) {
+        // MM:SS format
+        return parts[0] * 60 + parts[1];
+      } else {
+        return parseFloat(timeStr);
+      }
+    } catch (e) {
+      console.error("Error parsing time:", timeStr, e);
+      return 0;
+    }
   };
 
   // Get segments from the actual transcript

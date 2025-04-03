@@ -216,35 +216,36 @@ def setup_opensearch_vector_store(transcript, object_name=None):
         OpenSearchVectorSearch: The vector store object or None if failed
     """
     try:
-        # Extract text content if transcript is a dictionary
-        text_content = ""
-        if isinstance(transcript, dict):
-            # Try to get the text content from different possible fields
-            if "text" in transcript:
-                text_content = transcript["text"]
-            elif "timestamped_text" in transcript:
-                text_content = transcript["timestamped_text"]
-            elif "segments" in transcript and transcript["segments"]:
-                # Concatenate text from segments
-                text_content = " ".join([segment.get("text", "") for segment in transcript["segments"]])
-            else:
-                # If no recognizable format, convert to string
-                text_content = str(transcript)
+        if isinstance(transcript, list):
+            formatted_segments = []
+            for segment in transcript:
+                start_time = segment.get("start", "")
+                end_time = segment.get("end", "")
+                speaker = segment.get("speaker", "Unknown")
+                text = segment.get("text", "")
+                
+                # Format each segment with timestamp and speaker info
+                formatted_text = f"[{start_time} - {end_time}]\nSpeaker: {speaker}\nText: {text}"
+                formatted_segments.append(formatted_text)
+            
+            # Join all formatted segments
+            formatted_transcript = "\n\n".join(formatted_segments)
+            text_content = formatted_transcript
         else:
-            # If transcript is already a string, use it directly
+            # If it's not a list, use as is
             text_content = transcript
             
         # If in local mode, fall back to ChromaDB
         if IS_LOCAL:
             from services.chromadb_service import setup_ChromaVS
             logger.info(f"Local mode: Using ChromaDB fallback for {object_name}")
-            return setup_ChromaVS(text_content, object_name)
+            return setup_ChromaVS(object_name, text_content)
         
         # Test connection first
         if not test_opensearch_connection():
             logger.error("Failed to connect to OpenSearch, falling back to ChromaDB")
             from services.chromadb_service import setup_ChromaVS
-            return setup_ChromaVS(text_content, object_name)
+            return setup_ChromaVS(object_name, text_content)
         
         # Create index name from object name
         index_name = f"podcast_vectors_{object_name}".lower().replace(" ", "_")
@@ -253,7 +254,7 @@ def setup_opensearch_vector_store(transcript, object_name=None):
         if not create_opensearch_index(index_name):
             logger.error(f"Failed to create OpenSearch index for {object_name}, falling back to ChromaDB")
             from services.chromadb_service import setup_ChromaVS
-            return setup_ChromaVS(text_content, object_name)
+            return setup_ChromaVS(object_name, text_content)
             
         # Get embeddings model
         embeddings = get_embeddings()

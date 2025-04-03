@@ -157,95 +157,95 @@ def upload_file_to_s3(file_name, bucket, object_name=None):
     s3.upload_fileobj(file_name, bucket, object_name)
     return f"s3://{bucket}/{object_name}"
 
-def save_podcast_to_dynamodb(podcast_id, content_type, content=None, timestamp=datetime.now()):
-    if not aws_available:
-        logger.warning(f"AWS services not available. Skipping DynamoDB save for {podcast_id}, {content_type}")
-        return
-    
-    # Enhanced validation and logging for required keys
-    if not podcast_id or podcast_id.strip() == "":
-        logger.error("PodcastID is required but was not provided or is empty")
-        raise ValueError("PodcastID is required and cannot be empty")
-    
-    if not content_type or content_type.strip() == "":
-        logger.error("Type is required but was not provided or is empty")
-        raise ValueError("Type is required and cannot be empty")
-    
-    # Log the input values for debugging
-    logger.info(f"Input values - podcast_id: '{podcast_id}', content_type: '{content_type}'")
-    
-    # Ensure primary key values are strings and not empty
-    podcast_id = str(podcast_id).strip()
-    content_type = str(content_type).strip()
-    
-    # Additional validation after conversion
-    if not podcast_id:
-        logger.error("PodcastID is empty after conversion")
-        raise ValueError("PodcastID cannot be empty")
-    
-    if not content_type:
-        logger.error("Type is empty after conversion")
-        raise ValueError("Type cannot be empty")
-    
-    if content_type == "vector_store":
-        local_path = LOCAL_VECTOR_STORE_DIR / f"{podcast_id}.json"
-        vector_store = Chroma(persist_directory=str(local_path), embedding_function=get_embeddings())
-        content = vector_store
-    
-    # Convert any float values to Decimal for DynamoDB compatibility
+def save_podcast_to_dynamodb(podcast_id, content_type, content, timestamp=None):
+    """
+    Save podcast data to DynamoDB
+    Args:
+        podcast_id (str): The podcast ID
+        content_type (str): The type of content (transcript, summary, etc.)
+        content (str or dict): The content to save
+        timestamp (str, optional): Timestamp for the entry
+    """
     try:
+        # Use current timestamp if not provided
+        if timestamp is None:
+            timestamp = datetime.now().isoformat()
+        
         # Handle None content
         if content is None:
             content = ""  # Use empty string instead of None
         
-        # Convert content to string to avoid any type issues
-        content_str = str(content)
+        # Convert content to DynamoDB format based on its type
+        if isinstance(content, list):
+            # If content is a list of dictionaries (like our new transcript format)
+            dynamodb_content = {'L': []}
+            for item in content:
+                if isinstance(item, dict):
+                    # Convert each dictionary to DynamoDB map format
+                    map_item = {'M': {}}
+                    for key, value in item.items():
+                        # Convert each value based on its type
+                        if isinstance(value, str):
+                            map_item['M'][key] = {'S': value}
+                        elif isinstance(value, (int, float)):
+                            map_item['M'][key] = {'N': str(value)}
+                        elif isinstance(value, bool):
+                            map_item['M'][key] = {'BOOL': value}
+                        elif value is None:
+                            map_item['M'][key] = {'NULL': True}
+                        else:
+                            # Convert other types to string
+                            map_item['M'][key] = {'S': str(value)}
+                    dynamodb_content['L'].append(map_item)
+                elif isinstance(item, str):
+                    dynamodb_content['L'].append({'S': item})
+                elif isinstance(item, (int, float)):
+                    dynamodb_content['L'].append({'N': str(item)})
+                elif isinstance(item, bool):
+                    dynamodb_content['L'].append({'BOOL': item})
+                else:
+                    # Convert other types to string
+                    dynamodb_content['L'].append({'S': str(item)})
+        elif isinstance(content, dict):
+            # Convert dictionary to DynamoDB map format
+            dynamodb_content = {'M': {}}
+            for key, value in content.items():
+                if isinstance(value, str):
+                    dynamodb_content['M'][key] = {'S': value}
+                elif isinstance(value, (int, float)):
+                    dynamodb_content['M'][key] = {'N': str(value)}
+                elif isinstance(value, bool):
+                    dynamodb_content['M'][key] = {'BOOL': value}
+                elif value is None:
+                    dynamodb_content['M'][key] = {'NULL': True}
+                else:
+                    # Convert other types to string
+                    dynamodb_content['M'][key] = {'S': str(value)}
+        elif isinstance(content, str):
+            dynamodb_content = {'S': content}
+        elif isinstance(content, (int, float)):
+            dynamodb_content = {'N': str(content)}
+        elif isinstance(content, bool):
+            dynamodb_content = {'BOOL': content}
+        else:
+            # Convert other types to string
+            dynamodb_content = {'S': str(content)}
         
         logger.info(f"Content before saving (type: {type(content).__name__})")
         
+        # Get DynamoDB client and resource
+        dynamodb = boto3.client('dynamodb', **common_args)
+        dynamodb_resource = boto3.resource('dynamodb', **common_args)
+        
+        # Check if we're running locally
         if IS_LOCAL:
-            # When running locally, verify the table exists and has the correct schema
+            # Check if table exists, create if not
             try:
-                # Check if table exists
-                logger.info("Verifying DynamoDB table 'Podcasts' exists")
-                table_description = dynamodb.describe_table(TableName='Podcasts')
-                
-                # Log table schema for debugging
-                key_schema = table_description.get('Table', {}).get('KeySchema', [])
-                logger.info(f"DynamoDB table 'Podcasts' key schema: {key_schema}")
-                
-                # Verify the key schema has both PodcastID and Type
-                has_podcast_id = any(key.get('AttributeName') == 'PodcastID' for key in key_schema)
-                has_type = any(key.get('AttributeName') == 'Type' for key in key_schema)
-                
-                if not has_podcast_id or not has_type:
-                    logger.error(f"Table schema is incorrect. PodcastID: {has_podcast_id}, Type: {has_type}")
-                    # Recreate the table with the correct schema
-                    logger.info("Attempting to recreate the table with correct schema")
-                    try:
-                        dynamodb.delete_table(TableName='Podcasts')
-                        logger.info("Deleted existing table with incorrect schema")
-                    except Exception as e:
-                        logger.warning(f"Error deleting table: {str(e)}")
-                    
-                    # Create the table with correct schema
-                    dynamodb.create_table(
-                        TableName='Podcasts',
-                        KeySchema=[
-                            {'AttributeName': 'PodcastID', 'KeyType': 'HASH'},
-                            {'AttributeName': 'Type', 'KeyType': 'RANGE'}
-                        ],
-                        AttributeDefinitions=[
-                            {'AttributeName': 'PodcastID', 'AttributeType': 'S'},
-                            {'AttributeName': 'Type', 'AttributeType': 'S'}
-                        ],
-                        ProvisionedThroughput={'ReadCapacityUnits': 5, 'WriteCapacityUnits': 5}
-                    )
-                    logger.info("Recreated DynamoDB table 'Podcasts' with correct schema")
-            except ClientError as e:
-                if e.response['Error']['Code'] == 'ResourceNotFoundException':
-                    # Create the table
-                    logger.info("DynamoDB table 'Podcasts' not found, creating it")
+                dynamodb.describe_table(TableName='Podcasts')
+                logger.info("DynamoDB table 'Podcasts' exists")
+            except Exception as e:
+                if "ResourceNotFoundException" in str(e):
+                    logger.info("DynamoDB table 'Podcasts' does not exist, creating...")
                     dynamodb.create_table(
                         TableName='Podcasts',
                         KeySchema=[
@@ -267,14 +267,14 @@ def save_podcast_to_dynamodb(podcast_id, content_type, content=None, timestamp=d
             client_item = {
                 'PodcastID': {'S': podcast_id},
                 'Type': {'S': content_type},
-                'Content': {'S': content_str},
+                'Content': dynamodb_content,
                 'Timestamp': {'S': str(timestamp)}
             }
             
             # Log the item structure (without the full content for brevity)
             log_item = client_item.copy()
             if 'Content' in log_item:
-                log_item['Content']['S'] = f"[Content of type {type(content).__name__}]"
+                log_item['Content'] = f"[Content of type {type(content).__name__}]"
             logger.info(f"Saving item to DynamoDB using client: {log_item}")
             
             # Save to DynamoDB using the client directly
@@ -287,10 +287,19 @@ def save_podcast_to_dynamodb(podcast_id, content_type, content=None, timestamp=d
             # When running in AWS, use the resource interface
             logger.info("Using DynamoDB resource interface (AWS mode)")
             table = dynamodb_resource.Table('Podcasts')
+            
+            # For resource interface, we need to convert from DynamoDB format back to Python native types
+            if isinstance(content, list):
+                resource_content = content
+            elif isinstance(content, dict):
+                resource_content = content
+            else:
+                resource_content = content
+                
             resource_item = {
                 'PodcastID': podcast_id,
                 'Type': content_type,
-                'Content': content_str,
+                'Content': resource_content,
                 'Timestamp': str(timestamp)
             }
             

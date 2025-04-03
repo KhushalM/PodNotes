@@ -41,26 +41,23 @@ def get_embeddings():
 vector_stores = {}
 
 @lru_cache(maxsize=1)
-def setup_ChromaVS(transcript, object_name=None):
+def setup_ChromaVS(podcast_id, transcript):
     """
-    Set up a Chroma vector store from a transcript.
-    
+    Set up a ChromaDB vector store for a podcast transcript
     Args:
-        transcript (list): The transcript text or list of texts
-        podcast_id (str, optional): The podcast ID for persisting the vector store
-        
+        podcast_id (str): The podcast ID
+        transcript (str or dict): The transcript text or structured transcript data
     Returns:
-        Chroma: The Chroma vector store
+        dict: Success status and vector store path
     """
-
     try:
-        
-        local_path = VECTOR_STORE_DIR / f"{object_name}.chroma"
+        # Create a local directory for the vector store
+        local_path = VECTOR_STORE_DIR / f"{podcast_id}.chroma"
         # Remove the existing directory if it exists
         if os.path.exists(local_path):
             shutil.rmtree(local_path)
         # Create a new directory
-        os.makedirs(local_path, exist_ok=True)
+        os.makedirs(local_path, exist_ok=True)     
         embeddings = get_embeddings()
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=1000,
@@ -68,18 +65,53 @@ def setup_ChromaVS(transcript, object_name=None):
         )
 
         vector_store = Chroma(persist_directory=str(local_path), embedding_function=embeddings)
-        transcript = text_splitter.split_text(transcript)
-        if not transcript:
+        
+        # Format transcript segments with timestamps and speaker information
+        if isinstance(transcript, list):
+            # Process structured transcript with segments
+            formatted_segments = []
+            for segment in transcript:
+                start_time = segment.get("start", "")
+                end_time = segment.get("end", "")
+                speaker = segment.get("speaker", "Unknown")
+                text = segment.get("text", "")
+                
+                # Format each segment with timestamp and speaker info
+                formatted_text = f"[{start_time} - {end_time}]\nSpeaker: {speaker}\nText: {text}"
+                formatted_segments.append(formatted_text)
+            
+            # Join all formatted segments
+            formatted_transcript = "\n\n".join(formatted_segments)
+        else:
+            # If it's not a list, use as is
+            formatted_transcript = transcript
+        
+        # Split the formatted transcript into chunks
+        chunks = text_splitter.split_text(formatted_transcript)
+        if not chunks:
             return {"success": False, "error": "Failed to split document into chunks"}
-        full_transcript = "\n".join(transcript)
-        doc = [Document(page_content=full_transcript)]
-        vector_store.add_documents(doc)
+        
+        # Create Document objects for each chunk
+        documents = []
+        for i, chunk in enumerate(chunks):
+            doc_id = f"{podcast_id}-chunk-{i}"
+            # Create a Document object with the chunk text and metadata
+            doc = Document(
+                page_content=chunk,
+                metadata={"podcast_id": podcast_id, "chunk_id": i}
+            )
+            documents.append(doc)
+        
+        # Add documents to the vector store
+        vector_store.add_documents(documents)
+        
+        # Persist the vector store
         vector_store.persist()
-        logger.info(f"Vector store setup completed: {vector_store}")
-        return vector_store
+        logger.info(f"Created ChromaDB vector store for podcast {podcast_id}")
+        return {"success": True, "path": str(local_path)}
     except Exception as e:
         logger.error(f"Error setting up vector store: {str(e)}")
-        return None
+        return {"success": False, "error": str(e)}
     
 
 def retrieve_from_ChromaVS(podcast_id, query):

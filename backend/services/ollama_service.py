@@ -22,6 +22,8 @@ HUGGINGFACE_TOKEN = os.environ.get('HUGGINGFACE_TOKEN', '')
 PVFALCON_TOKEN = os.environ.get('PVFALCON_TOKEN', '')
 
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+logger.info(f"DIARIZATION: {DIARIZATION}")
 
 def transcribe_audio(audio_file_path):
     """
@@ -34,12 +36,9 @@ def transcribe_audio(audio_file_path):
     try:
         # Load the Whisper model (you can change the model size as needed)
         model = whisper.load_model("base")
-        
-        # Transcribe the audio
         result = model.transcribe(audio_file_path)  
         
         if DIARIZATION:
-            logger = logging.getLogger(__name__)
             logger.info("Performing diarization...")
             
             # Get multiple diarization outputs using different systems
@@ -166,31 +165,38 @@ def transcribe_audio(audio_file_path):
             result["speakers"] = final_diarization
             
             # Format the transcription with timestamps and speakers
-            transcription_with_timestamps = ""
+            transcription_with_timestamps = []
             for segment in result["segments"]:
                 start_time = format_timestamp(segment["start"])
                 end_time = format_timestamp(segment["end"])
-                speaker = segment.get("speaker", "Unknown")
+                speaker = segment["speaker"]
                 text = segment["text"]
-                transcription_with_timestamps += f"[{start_time} --> {end_time}] {speaker}: {text}\n"
+                transcription_with_timestamps.append({
+                    "start": start_time,
+                    "end": end_time,
+                    "speaker": speaker,
+                    "text": text,
+                })
+            
+            # Return both the full text and the timestamped version
+            return transcription_with_timestamps
         else:
             # Format the transcription with timestamps (no speaker info)
-            transcription_with_timestamps = ""
+            transcription_with_timestamps = []
             for segment in result["segments"]:
                 start_time = format_timestamp(segment["start"])
                 end_time = format_timestamp(segment["end"])
                 text = segment["text"]
-                transcription_with_timestamps += f"[{start_time} --> {end_time}] {text}\n"
+                transcription_with_timestamps.append({
+                    "start": start_time,
+                    "end": end_time,
+                    "text": text
+                })
         
-        logger.info("Transcription with timestamps completed")
-        # Return both the full text and the timestamped version
-        return {
-            "text": result["text"],
-            "segments": result["segments"],
-            "timestamped_text": transcription_with_timestamps
-        }
+            logger.info("Transcription with timestamps completed")
+            # Return both the full text and the timestamped version
+            return transcription_with_timestamps
     except Exception as e:
-        logger = logging.getLogger(__name__)
         logger.error(f"Error in transcribe_audio: {str(e)}")
         raise Exception(f"Error transcribing audio with Whisper: {str(e)}")
 
