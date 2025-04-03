@@ -9,9 +9,10 @@ A full-stack application for podcast transcription, summarization, and interacti
 PodNotes transforms your podcast listening experience by:
 
 1. **Transcribing** audio files using Whisper
-2. **Summarizing** podcast content with AI
-3. **Enabling** natural language Q&A about the podcast content
-4. **Storing** podcasts for future reference
+2. **Identifying** speakers with advanced diarization
+3. **Summarizing** podcast content with AI
+4. **Enabling** natural language Q&A about the podcast content
+5. **Storing** podcasts for future reference
 
 The application uses a modern tech stack with a FastAPI backend, React frontend, and leverages AWS services for production deployment.
 
@@ -19,6 +20,7 @@ The application uses a modern tech stack with a FastAPI backend, React frontend,
 
 - **Audio Processing**: Upload and transcribe podcast audio files
 - **Transcription**: Convert speech to text using OpenAI's Whisper
+- **Speaker Diarization**: Identify different speakers using DOVER-Lap fusion technology
 - **AI Summarization**: Generate concise summaries of podcast content
 - **Interactive Q&A**: Ask questions about podcast content using RAG
 - **Cloud Storage**: Store podcasts, transcripts, and metadata in AWS
@@ -78,6 +80,52 @@ PodNotes uses Retrieval-Augmented Generation (RAG) to provide accurate answers t
 4. **Generation**:
    - The LLM generates an answer using the retrieved context
    - The system maintains conversation history for follow-up questions
+
+## Advanced Speaker Diarization with DOVER-Lap
+
+PodNotes uses DOVER-Lap (Diarization Output Voting Error Reduction - Label-Propagation) for accurate speaker identification in podcasts:
+
+### How DOVER-Lap Works
+
+1. **Multiple Diarization Systems**:
+   - The system runs multiple speaker diarization algorithms in parallel:
+     - **Pyannote.audio**: State-of-the-art neural speaker diarization
+     - **PvFalcon**: Picovoice's speaker diarization technology
+
+2. **System Fusion**:
+   - DOVER-Lap combines the outputs from multiple diarization systems
+   - Uses a graph-based label propagation algorithm to resolve disagreements
+   - Produces a more accurate consensus diarization than any single system
+
+3. **Integration with Whisper**:
+   - Speaker labels are mapped to Whisper transcript segments
+   - Each segment is assigned to the speaker with maximum temporal overlap
+   - Results in a structured transcript with accurate speaker attribution
+
+4. **Benefits**:
+   - Improved speaker identification accuracy (10-20% error reduction)
+   - More robust to different acoustic conditions and speaker overlaps
+   - Enhanced transcript readability with clear speaker labels
+
+### Setup Requirements
+
+To use the DOVER-Lap diarization feature:
+
+1. **HuggingFace Token**:
+   - Create an account at [HuggingFace](https://huggingface.co/)
+   - Accept the user agreements for:
+     - [pyannote/speaker-diarization](https://huggingface.co/pyannote/speaker-diarization)
+     - [pyannote/segmentation](https://huggingface.co/pyannote/segmentation)
+   - Generate a token at [HuggingFace Settings](https://huggingface.co/settings/tokens)
+   - Add the token to your `.env` file as `HUGGINGFACE_TOKEN=your-token-here`
+
+2. **Enable Diarization**:
+   - Set `DIARIZATION=true` in your environment or `.env` file
+   - The system will automatically use DOVER-Lap when diarization is enabled
+
+3. **System Requirements**:
+   - Requires PyTorch and additional dependencies
+   - Recommended: GPU for faster processing of longer podcasts
 
 ## Setup and Installation
 
