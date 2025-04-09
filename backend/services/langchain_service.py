@@ -1,6 +1,5 @@
 from langchain_core.callbacks import CallbackManager, StreamingStdOutCallbackHandler
 from services.chromadb_service import setup_ChromaVS, retrieve_from_ChromaVS, add_chat_message_to_ChromaVS
-from services.opensearch_service import setup_opensearch_vector_store, retrieve_from_opensearch, add_message_to_opensearch
 from langchain.memory import ConversationBufferMemory
 from langchain_community.llms import Ollama
 from services.chromadb_service import vector_stores
@@ -260,19 +259,11 @@ def ask_question(question, podcast_id):
     local_path = VECTOR_STORE_DIR / f"{podcast_id}.chroma"
 
     # Get the vector store retriever
-    if IS_LOCAL:
-        # Use local ChromaDB
-        if local_path.exists():
-            retriever = retrieve_from_ChromaVS(podcast_id, question)
-        else:
-            logger.error("Attempted to get answer with no podcast loaded")
-            return {"error": "Please upload a podcast first before asking questions."}
+    if local_path.exists():
+        retriever = retrieve_from_ChromaVS(podcast_id, question)
     else:
-        # Use OpenSearch
-        retriever = retrieve_from_opensearch(podcast_id, question)
-        if isinstance(retriever, str):
-            logger.error(f"OpenSearch retriever error: {retriever}")
-            return {"error": "Please upload a podcast first before asking questions."}
+        logger.error("Attempted to get answer with no podcast loaded")
+        return {"error": "Please upload a podcast first before asking questions."}
 
     # Load chat history if podcast_id is provided
     chat_history = []
@@ -282,10 +273,7 @@ def ask_question(question, podcast_id):
             chat_histories[podcast_id] = load_chat_history(podcast_id)
         
         # Add the current question to the vector store
-        if IS_LOCAL:
-            add_chat_message_to_ChromaVS(f"User question: {question}", podcast_id)
-        else:
-            add_message_to_opensearch(f"User question: {question}", podcast_id)
+        add_chat_message_to_ChromaVS(f"User question: {question}", podcast_id)
         
         # Convert the chat history to the format expected by LangChain
         for message in chat_histories[podcast_id]:
@@ -359,9 +347,6 @@ def ask_question(question, podcast_id):
         save_chat_history(podcast_id, chat_histories[podcast_id])
         
         # Add the answer to the vector store as well
-        if IS_LOCAL:
-            add_chat_message_to_ChromaVS(f"AI answer: {answer}", podcast_id)
-        else:
-            add_message_to_opensearch(f"AI answer: {answer}", podcast_id)
+        add_chat_message_to_ChromaVS(f"AI answer: {answer}", podcast_id)
     
     return answer

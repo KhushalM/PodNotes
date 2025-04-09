@@ -41,15 +41,12 @@ try:
     # Try to import optional services, but don't fail if they're not available
     try:
         from services.chromadb_service import setup_ChromaVS, retrieve_from_ChromaVS
-        from services.opensearch_service import setup_opensearch_vector_store, retrieve_from_opensearch
         logger.info("Successfully imported vector database services")
     except ImportError as e:
         logger.warning(f"Vector database services not available: {str(e)}")
         # Define dummy functions to avoid errors
         def setup_ChromaVS(docs): return None
         def retrieve_from_ChromaVS(vs, query): return []
-        def setup_opensearch_vector_store(transcript, object_name): return None
-        def retrieve_from_opensearch(object_name, query): return []
     
     logger.info("AWS services initialized successfully")
 except Exception as e:
@@ -64,8 +61,6 @@ except Exception as e:
     def langchain_ask_question(question, podcast_id): return "Mock answer to your question"
     def setup_ChromaVS(docs): return None
     def retrieve_from_ChromaVS(vs, query): return []
-    def setup_opensearch_vector_store(transcript, object_name): return None
-    def retrieve_from_opensearch(object_name, query): return []
     table = None
 
 # Enable mock mode for testing without AWS services
@@ -145,7 +140,7 @@ async def upload_file(file: UploadFile = File(...), mock: bool = Form(False)):
         )
         
         # Set up vector store
-        vector_store = setup_opensearch_vector_store(transcript_content, podcast_id)
+        vector_store = setup_ChromaVS(podcast_id, transcript_content)
         logger.info("Vector store setup completed")
         
         # Generate summary

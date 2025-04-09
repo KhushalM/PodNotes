@@ -77,9 +77,6 @@ try:
         dynamodb = boto3.client('dynamodb', **common_args)
         dynamodb_resource = boto3.resource('dynamodb', **common_args)
         
-        # Initialize OpenSearch client
-        opensearch_client = boto3.client('opensearch', **common_args)
-        
         # Test connection by making a simple call
         s3.list_buckets()
         
@@ -140,7 +137,6 @@ except Exception as e:
     dynamodb = None
     dynamodb_resource = None
     table = None
-    opensearch_client = None
 
 def upload_file_to_s3(file_name, bucket, object_name=None):
     if not aws_available:
