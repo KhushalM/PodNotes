@@ -2,27 +2,14 @@ import whisper
 import os
 import logging
 import pvfalcon
-import numpy as np
-from scipy.io import wavfile
-import torch
-from dover_lap import dover_lap
-
-# Try to import pyannote.audio, but don't fail if it's not available
-try:
-    from pyannote.audio import Pipeline
-    PYANNOTE_AVAILABLE = True
-except ImportError:
-    PYANNOTE_AVAILABLE = False
-    logger = logging.getLogger(__name__)
-    logger.warning("pyannote.audio not available. Will use only PvFalcon for diarization.")
 
 # Check if DIARIZATION is set in environment
-DIARIZATION = os.environ.get('DIARIZATION', 'false').lower() == 'true'
-HUGGINGFACE_TOKEN = os.environ.get('HUGGINGFACE_TOKEN', '')
-PVFALCON_TOKEN = os.environ.get('PVFALCON_TOKEN', '')
+raw_diarization = os.environ.get('DIARIZATION', 'false')
+logger = logging.getLogger(__name__)
+logger.info(f"Raw DIARIZATION environment variable: '{raw_diarization}'")
+DIARIZATION = raw_diarization.lower() == 'true'
 
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 logger.info(f"DIARIZATION: {DIARIZATION}")
 
 def transcribe_audio(audio_file_path):
@@ -44,35 +31,7 @@ def transcribe_audio(audio_file_path):
             # Get multiple diarization outputs using different systems
             diarization_outputs = []
             
-            # 1. Pyannote.audio diarization (if available)
-            if PYANNOTE_AVAILABLE and HUGGINGFACE_TOKEN:
-                try:
-                    logger.info("Attempting pyannote.audio diarization...")
-                    # Initialize pyannote pipeline with HuggingFace token
-                    # You need to accept the user agreement at https://huggingface.co/pyannote/speaker-diarization
-                    pyannote_pipeline = Pipeline.from_pretrained(
-                        "pyannote/speaker-diarization", 
-                        use_auth_token=HUGGINGFACE_TOKEN
-                    )
-                    
-                    # Apply the pipeline to an audio file
-                    pyannote_diarization = pyannote_pipeline(audio_file_path)
-                    
-                    # Convert pyannote output to RTTM-like format for DOVER-Lap
-                    pyannote_segments = []
-                    for turn, _, speaker in pyannote_diarization.itertracks(yield_label=True):
-                        pyannote_segments.append({
-                            "start": turn.start,
-                            "end": turn.end,
-                            "speaker": speaker
-                        })
-                    diarization_outputs.append(pyannote_segments)
-                    logger.info("Pyannote diarization completed")
-                except Exception as e:
-                    logger.error(f"Error with pyannote diarization: {str(e)}")
-                    logger.info("Continuing with PvFalcon diarization only")
-            
-            # 2. PvFalcon diarization (always attempt this as backup)
+            # 1. PvFalcon diarization (always attempt this as backup)
             try:
                 logger.info("Performing PvFalcon diarization...")
                 falcon = pvfalcon.create(access_key=PVFALCON_TOKEN)
@@ -107,48 +66,12 @@ def transcribe_audio(audio_file_path):
                     "segments": result["segments"],
                     "timestamped_text": transcription_with_timestamps
                 }
-            
-            # Apply DOVER-Lap if we have multiple diarization outputs
-            if len(diarization_outputs) > 1:
-                try:
-                    # Convert our format to DOVER-Lap expected format
-                    dover_inputs = []
-                    for system_output in diarization_outputs:
-                        dover_format = []
-                        for segment in system_output:
-                            dover_format.append((
-                                segment["start"], 
-                                segment["end"], 
-                                segment["speaker"]
-                            ))
-                        dover_inputs.append(dover_format)
-                    
-                    # Apply DOVER-Lap fusion
-                    fused_diarization = dover_lap(dover_inputs)
-                    
-                    # Convert back to our format
-                    final_diarization = []
-                    for start, end, speaker in fused_diarization:
-                        final_diarization.append({
-                            "start": start,
-                            "end": end,
-                            "speaker": speaker
-                        })
-                    logger.info("DOVER-Lap fusion completed successfully")
-                except Exception as e:
-                    logger.error(f"Error with DOVER-Lap fusion: {str(e)}")
-                    # Fall back to first available diarization
-                    final_diarization = diarization_outputs[0]
-            else:
-                # If only one diarization system worked, use that
-                final_diarization = diarization_outputs[0]
-            
             # Map diarization results to Whisper segments
             for segment in result["segments"]:
                 best_overlap = 0
                 best_speaker = None
                 
-                for diar_segment in final_diarization:
+                for diar_segment in diarization_outputs[0]:
                     # Calculate overlap between whisper segment and diarization segment
                     overlap_start = max(segment["start"], diar_segment["start"])
                     overlap_end = min(segment["end"], diar_segment["end"])
@@ -162,7 +85,7 @@ def transcribe_audio(audio_file_path):
                 segment["speaker"] = best_speaker if best_speaker else f"Speaker_Unknown"
             
             # Store speaker information in result
-            result["speakers"] = final_diarization
+            result["speakers"] = diarization_outputs[0]
             
             # Format the transcription with timestamps and speakers
             transcription_with_timestamps = []
@@ -183,13 +106,16 @@ def transcribe_audio(audio_file_path):
         else:
             # Format the transcription with timestamps (no speaker info)
             transcription_with_timestamps = []
+            speaker = "Unidentified Speaker"
             for segment in result["segments"]:
                 start_time = format_timestamp(segment["start"])
                 end_time = format_timestamp(segment["end"])
+                segment["speaker"] = speaker
                 text = segment["text"]
                 transcription_with_timestamps.append({
                     "start": start_time,
                     "end": end_time,
+                    "speaker": speaker,
                     "text": text
                 })
         

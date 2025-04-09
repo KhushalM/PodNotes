@@ -12,7 +12,10 @@ fi
 # Set environment variables
 export IS_LOCAL=true
 export MOCK_MODE=false
-export DIARIZATION=true
+export DIARIZATION=false
+
+# Print environment variables for debugging
+echo "DIARIZATION value in shell: $DIARIZATION"
 
 # OpenSearch configuration
 # Set IS_LOCAL=false to use OpenSearch instead of local ChromaDB

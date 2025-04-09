@@ -10,6 +10,8 @@ from pathlib import Path
 import logging
 import os
 import json
+import atexit
+import multiprocessing
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -27,6 +29,19 @@ os.makedirs(CHAT_HISTORY_DIR, exist_ok=True)
 
 VECTOR_STORE_DIR = Path(os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "vector_stores"))
 os.makedirs(VECTOR_STORE_DIR, exist_ok=True)
+
+# Register cleanup function to prevent semaphore leaks
+def cleanup_resources():
+    """Clean up any multiprocessing resources to prevent semaphore leaks."""
+    try:
+        # Force cleanup of any remaining multiprocessing resources
+        multiprocessing.current_process()._config['semprefix'] = 'cleared'
+        logger.info("Cleaned up multiprocessing resources")
+    except Exception as e:
+        logger.warning(f"Error during multiprocessing cleanup: {e}")
+
+# Register the cleanup function to run at exit
+atexit.register(cleanup_resources)
 
 def get_llm():
     model_name = "gemma3:4b"
@@ -132,11 +147,20 @@ def summarize_podcast(transcript):
     
     # Initial prompt to create a summary from the first document
     initial_prompt_template = """
-    You are a helpful assistant summarizing a podcast transcript.
+    You are a professional podcast summarizer creating concise, informative summaries.
     
     Write a detailed summary of the following podcast transcript segment:
     
     {text}
+    
+    Follow these formatting guidelines:
+    - Use proper Markdown formatting
+    - For main topics, use "## Topic Name" format
+    - For subtopics or key points, use bullet points with "- " prefix
+    - Bold important terms or names with **term**
+    - Do not include conversational elements like questions or personal addresses
+    - Present information in a professional, third-person style
+    - Include speaker names when relevant
     
     SUMMARY:
     """
@@ -144,7 +168,7 @@ def summarize_podcast(transcript):
     
     # Refine prompt to iteratively improve the summary with each new document
     refine_prompt_template = """
-    You are a helpful assistant summarizing a podcast transcript.
+    You are a professional podcast summarizer creating concise, informative summaries.
     
     We have provided an existing summary of a podcast transcript:
     {existing_answer}
@@ -152,8 +176,17 @@ def summarize_podcast(transcript):
     We have a new segment of the podcast transcript that needs to be incorporated:
     {text}
     
-    Given this new information, refine the existing summary to create an updated, comprehensive summary of the podcast. 
-    If the new segment introduces new speakers, topics, or important points, be sure to include them. Also include new topics.
+    Given this new information, refine the existing summary to create an updated, comprehensive summary of the podcast.
+    If the new segment introduces new speakers, topics, or important points, be sure to include them.
+    
+    Follow these formatting guidelines:
+    - Maintain the same Markdown formatting style as the existing summary
+    - For main topics, use "## Topic Name" format
+    - For subtopics or key points, use bullet points with "- " prefix
+    - Bold important terms or names with **term**
+    - Do not include conversational elements like questions or personal addresses
+    - Present information in a professional, third-person style
+    - Include speaker names when relevant
     
     REFINED SUMMARY:
     """
