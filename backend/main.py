@@ -177,22 +177,28 @@ async def process_question(podcast_id: str, question: str = Form(...)):
     try:
         logger.info(f"Received question for podcast: {podcast_id}")
         
-        # Get transcript from DynamoDB
-        try:
-            response = table.get_item(
-                Key={
-                    'PodcastID': podcast_id,  # Changed from 'PodcastId' to 'PodcastID' to match DynamoDB schema
-                    'Type': 'transcript'
-                }
-            )
-           
-            transcript = response.get('Item', {}).get('Content', '')
-            if not transcript:
-                logger.error(f"Transcript not found for podcast: {podcast_id}")
-                raise HTTPException(status_code=404, detail="Transcript not found")
-        except Exception as e:
-            logger.error(f"Error retrieving transcript: {str(e)}")
-            raise HTTPException(status_code=500, detail=f"Error retrieving transcript: {str(e)}")
+        # Get transcript from DynamoDB or use mock data if in MOCK_MODE
+        transcript = None
+        
+        if MOCK_MODE or table is None:
+            logger.info("Using mock transcript in MOCK_MODE")
+            transcript = "This is a mock transcript for testing purposes."
+        else:
+            try:
+                response = table.get_item(
+                    Key={
+                        'PodcastID': podcast_id,  # Changed from 'PodcastId' to 'PodcastID' to match DynamoDB schema
+                        'Type': 'transcript'
+                    }
+                )
+               
+                transcript = response.get('Item', {}).get('Content', '')
+                if not transcript:
+                    logger.error(f"Transcript not found for podcast: {podcast_id}")
+                    raise HTTPException(status_code=404, detail="Transcript not found")
+            except Exception as e:
+                logger.error(f"Error retrieving transcript: {str(e)}")
+                raise HTTPException(status_code=500, detail=f"Error retrieving transcript: {str(e)}")
         
         # Process question using LangChain
         try:

@@ -239,14 +239,15 @@ def save_chat_history(podcast_id, history):
     with open(history_file, 'w') as f:
         json.dump(history, f)
 
-def ask_question(question, podcast_id):
+def ask_question(question, podcast_id, speaker=None, time_range=None):
     """
     Process a question against a transcript using LangChain, with chat history support.
     
     Args:
         question (str): The question to answer
-        transcript (str): The transcript text to search for answers
-        podcast_id (str, optional): The podcast ID for maintaining chat history
+        podcast_id (str): The podcast ID for maintaining chat history
+        speaker (str, optional): Filter results by specific speaker
+        time_range (dict, optional): Filter by time range with start and end in seconds
         
     Returns:
         str: The answer to the question
@@ -258,9 +259,39 @@ def ask_question(question, podcast_id):
     llm = get_llm()
     local_path = VECTOR_STORE_DIR / f"{podcast_id}.chroma"
 
-    # Get the vector store retriever
+    # Get the vector store retriever with metadata filtering
     if local_path.exists():
-        retriever = retrieve_from_ChromaVS(podcast_id, question)
+        # Determine if we need to filter by time range
+
+        #Check if question contains question based on time range
+        
+        
+        start_time = None
+        end_time = None
+        if time_range:
+            start_time = time_range.get('start')
+            end_time = time_range.get('end')
+        
+        # Automatically classify the query type
+        from services.chromadb_service import classify_query, retrieve_with_metadata_filters
+        query_type = classify_query(question)
+        
+        # Get retriever with appropriate filters
+        retriever = retrieve_with_metadata_filters(
+            podcast_id=podcast_id,
+            query=question,
+            speaker=speaker,
+            start_time=start_time,
+            end_time=end_time,
+            hybrid=True,
+            query_type=query_type
+        )
+        
+        logger.info(f"Query classified as '{query_type}' type")
+        if speaker:
+            logger.info(f"Filtering results by speaker: {speaker}")
+        if time_range:
+            logger.info(f"Filtering results by time range: {start_time}s to {end_time}s")
     else:
         logger.error("Attempted to get answer with no podcast loaded")
         return {"error": "Please upload a podcast first before asking questions."}
@@ -304,11 +335,13 @@ def ask_question(question, podcast_id):
     Use the following pieces of context which is a transcript for a podcast formatted into a list of segments which contain start and end times, speaker, and text 
     to answer the question at the end. You are talking to the user directly.
     If you don't know the answer, just say that you don't know, don't try to make up an answer.
-    Keep your answers direct and to the point without evaluating your own response.
+    Keep your answers evaluating your own response.
     Do not include phrases like "based on the context" or "according to the transcript".
     Never respond as if you're reviewing or evaluating an answer.
     Never start with phrases like "That's a fantastic explanation" or "Here's a breakdown".
     Just answer the question directly as if you are having a conversation with the user.
+
+    Talk like you are a podcast assistant helping the user understand the podcast from first principles. Give the answer in a way that the user can understand and in a bit more detail atleast 2 sentences.
     
     Context: {context}
     
@@ -329,7 +362,7 @@ def ask_question(question, podcast_id):
         combine_docs_chain_kwargs={"prompt": QA_PROMPT},
         return_source_documents=False,
         return_generated_question=False,
-        verbose=False
+        verbose=True
     )
     
     # Get response
