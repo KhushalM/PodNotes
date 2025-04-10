@@ -243,13 +243,13 @@ const QASection: React.FC = () => {
     "What is the main topic of this podcast?",
     "Can you summarize the key points?",
     "Who are the speakers in this podcast?",
-    "When was this content created?",
+    "List down different sections of this podcast?",
   ];
 
   return (
     <Card className="w-full glass animate-fade-in">
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center justify-center bg-gradient-to-r from-green-500/20 to-blue-500/20 p-4 rounded-full mb-4">
+        <CardTitle className="flex items-center justify-center bg-gradient-to-r from-blue-500/20 to-purple-500/20 p-4 rounded-full mb-4">
           <div className="flex items-center gap-2">
             <MessageSquare size={18} className="text-pod-dark-blue" />
             <span>Ask Questions</span>
@@ -270,8 +270,8 @@ const QASection: React.FC = () => {
         {showChat ? (
           messages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center p-6">
-            <div className="bg-gradient-to-r from-green-500/20 to-blue-500/20 p-4 rounded-full mb-4">
-              <MessageSquare size={32} className="text-green-400" />
+            <div className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 p-4 rounded-full mb-4">
+              <MessageSquare size={32} className="text-blue-400" />
             </div>
             <h3 className="text-xl font-semibold mb-2">Ask About This Podcast</h3>
             <p className="text-black/70 mb-6 max-w-md">
@@ -283,14 +283,14 @@ const QASection: React.FC = () => {
                 <Button 
                   key={i}
                   variant="outline" 
-                  className="justify-start h-auto py-3 px-4 bg-slate-800/50 border-slate-700 hover:bg-slate-700/50 text-left"
+                  className="justify-start h-auto py-3 px-4 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white border-none"
                   onClick={() => {
                     setShowChat(true);
                     setTimeout(() => handleSuggestedQuestion(q), 100);
                   }}
                   disabled={isLoading}
                 >
-                  <MessageSquare size={14} className="mr-2 flex-shrink-0 text-green-400" />
+                  <MessageSquare size={18} className="mr-2 flex-shrink-0 text-white" />
                   <span className="truncate">{q}</span>
                 </Button>
               ))}
@@ -375,8 +375,8 @@ const QASection: React.FC = () => {
           )
         ) : (
           <div className="h-full flex flex-col items-center justify-center text-center p-6">
-            <div className="bg-gradient-to-r from-green-500/20 to-blue-500/20 p-4 rounded-full mb-4">
-              <MessageSquare size={32} className="text-green-400" />
+            <div className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 p-4 rounded-full mb-4">
+              <MessageSquare size={32} className="text-blue-400" />
             </div>
             <h3 className="text-xl font-semibold mb-2">Ask About This Podcast</h3>
             <p className="text-black/70 mb-6 max-w-md">
@@ -388,14 +388,14 @@ const QASection: React.FC = () => {
                 <Button 
                   key={i}
                   variant="outline" 
-                  className="justify-start h-auto py-3 px-4 bg-slate-800/50 border-slate-700 hover:bg-slate-700/50 text-left"
+                  className="justify-start h-auto py-3 px-4 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white border-none"
                   onClick={() => {
                     setShowChat(true);
                     setTimeout(() => handleSuggestedQuestion(q), 100);
                   }}
                   disabled={isLoading}
                 >
-                  <MessageSquare size={14} className="mr-2 flex-shrink-0 text-green-400" />
+                  <MessageSquare size={18} className="mr-2 flex-shrink-0 text-white" />
                   <span className="truncate">{q}</span>
                 </Button>
               ))}
@@ -410,7 +410,7 @@ const QASection: React.FC = () => {
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="flex-grow bg-gray-700/30 border-gray-600 focus-visible:ring-gray-500 text-white min-h-[60px] resize-none"
+              className="flex-grow bg-white/900 border-white/800 focus-visible:ring-white/700 text-black min-h-[60px] resize-none"
               disabled={isLoading}
             />
             <Button 
@@ -418,8 +418,8 @@ const QASection: React.FC = () => {
               size="icon" 
               className={`h-8 w-8 rounded-full ${
                 question.trim() 
-                  ? 'bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600' 
-                  : 'bg-slate-700 hover:bg-slate-600'
+                  ? 'bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600' 
+                  : 'bg-gradient-to-r from-blue-500 to-purple-500'
               }`}
               disabled={!question.trim() || isLoading}
             >
