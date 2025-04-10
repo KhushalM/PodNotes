@@ -10,8 +10,10 @@ import { usePodcast } from '@/hooks/use-podcast';
 import { Button } from '@/components/ui/button';
 import { FileAudio, Headphones, BookOpen, MessageSquare, Upload } from 'lucide-react';
 import { ElegantBackground } from '@/components/ui/elegant-background';
+import { Link, Outlet } from 'react-router-dom';
+import { PodcastProvider } from '@/context/podcast-context';
 
-const MainContent = () => {
+export const MainContent = () => {
   const { currentPodcast, podcasts } = usePodcast();
 
   if (podcasts.length === 0) {
@@ -174,7 +176,7 @@ const MainContent = () => {
   );
 };
 
-const Layout = ({ children }: { children: React.ReactNode }) => {
+export const Layout = () => {
   return (
     <div className="min-h-screen flex flex-col">
       <ElegantBackground 
@@ -191,21 +193,21 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               <AnimatedLogo className="text-black dark:text-white" />
             </div>
             <nav className="hidden md:flex items-center space-x-1">
-              <Button variant="ghost" size="sm" className="text-foreground/70 hover:text-foreground hover:bg-primary/20">
-                Home
+              <Button variant="ghost" size="sm" className="text-foreground/70 hover:text-foreground hover:bg-primary/20" asChild>
+                <Link to="/">Home</Link>
               </Button>
-              <Button variant="ghost" size="sm" className="text-foreground/70 hover:text-foreground hover:bg-primary/20">
-                Features
+              <Button variant="ghost" size="sm" className="text-foreground/70 hover:text-foreground hover:bg-primary/20" asChild>
+                <Link to="/features">Features</Link>
               </Button>
-              <Button variant="ghost" size="sm" className="text-foreground/70 hover:text-foreground hover:bg-primary/20">
-                About
+              <Button variant="ghost" size="sm" className="text-foreground/70 hover:text-foreground hover:bg-primary/20" asChild>
+                <Link to="/about">About</Link>
               </Button>
             </nav>
           </div>
         </div>
       </header>
-      <main className="flex-1">
-        {children}
+      <main className="flex-grow relative z-10"> 
+        <Outlet />
       </main>
       <footer className="border-t border-border/40 py-6 md:py-0">
         <div className="container flex flex-col md:flex-row justify-between items-center h-16">
@@ -225,11 +227,9 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
 const Index = () => {
   return (
-    <Layout>
-      <div className="container mx-auto pb-20">
-        <MainContent />
-      </div>
-    </Layout>
+    <PodcastProvider>
+      <Layout /> 
+    </PodcastProvider>
   );
 };
 
