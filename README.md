@@ -24,7 +24,7 @@ The application uses a modern tech stack with a FastAPI backend, React frontend,
 - **AI Summarization**: Generate concise summaries of podcast content
 - **Interactive Q&A**: Ask questions about podcast content using RAG
 - **Cloud Storage**: Store podcasts, transcripts, and metadata in AWS
-- **Vector Search**: Semantic search capabilities using OpenSearch or ChromaDB
+- **Vector Search**: Semantic search capabilities using ChromaDB
 
 ## Architecture
 
@@ -43,43 +43,57 @@ PodNotes uses a hybrid architecture that can run locally for development or on A
 
 ### AWS Production Mode
 
+*Note: This architecture uses ChromaDB deployed alongside the backend (e.g., on EC2 or ECS) for vector storage, simplifying the stack compared to previous OpenSearch integration.*
+
 ```
-┌─────────────┐    ┌─────────────┐    ┌───────────────┐
-│             │    │             │    │    AWS S3     │
-│   Frontend  │    │   Backend   │    │  (Audio &     │
-│  (React/TS) │◄───┤   (FastAPI) │◄───┤   Transcript  │
-│             │    │             │    │   Storage)    │
-└─────────────┘    └─────────────┘    └───────────────┘
-                          │                   ▲
-                          ▼                   │
-                   ┌─────────────┐    ┌───────────────┐
-                   │ AWS DynamoDB│    │ AWS OpenSearch│
-                   │ (Metadata   │    │ (Vector       │
-                   │  Storage)   │    │  Storage)     │
-                   └─────────────┘    └───────────────┘
+┌─────────────┐    ┌──────────────────────────────┐    ┌───────────────┐
+│             │    │     Backend (FastAPI/ECS)    │    │    AWS S3     │
+│   Frontend  │    │ + Whisper + ChromaDB + LLM   │    │  (Audio &     │
+│  (React/TS) │◄───┤                              │◄───┤   Transcript  │
+│             │    │                              │    │   Storage)    │
+└─────────────┘    └──────────────────────────────┘    └───────────────┘
+                                      │
+                                      ▼
+                               ┌─────────────┐
+                               │ AWS DynamoDB│
+                               │ (Metadata   │
+                               │  Storage)   │
+                               └─────────────┘
 ```
+
+### Backend Service Structure
+
+The backend logic is organized into services within the `backend/services/` directory:
+
+- `aws_service.py`: Handles interactions with AWS services like S3 and DynamoDB.
+- `chromadb_service.py`: Manages vector storage and retrieval using ChromaDB for the RAG system.
+- `langchain_service.py`: Orchestrates language model interactions (transcription, summarization, Q&A) using LangChain.
+- `ollama_service.py`: Provides specific integration points for Ollama models if used.
 
 ## How RAG Works in PodNotes
 
-PodNotes uses Retrieval-Augmented Generation (RAG) to provide accurate answers to questions about podcast content:
+PodNotes uses a standard **Retrieval-Augmented Generation (RAG)** approach to provide accurate answers to questions about podcast content:
 
 1. **Document Processing**:
-   - Podcast audio is transcribed to text
-   - Text is split into smaller chunks
-   - Each chunk is converted to a vector embedding
+   - Podcast audio is transcribed to text using Whisper.
+   - Text is split into smaller chunks.
+   - Each chunk is converted to a vector embedding.
+   - Vector embeddings and transcript metadata are stored in **ChromaDB**.
+   - Original audio files and structured transcripts are stored in S3 (AWS) or locally.
+   - Podcast metadata (like summaries) is stored in DynamoDB (AWS) or locally.
 
 2. **Storage**:
-   - Vector embeddings are stored in OpenSearch (AWS) or ChromaDB (local)
-   - Metadata and references are stored in DynamoDB
+   - Vector embeddings are stored in ChromaDB.
+   - Metadata and references are stored in DynamoDB.
 
 3. **Retrieval**:
-   - When a question is asked, it's converted to a vector embedding
-   - Similar chunks from the transcript are retrieved based on vector similarity
-   - Retrieved chunks provide context for the LLM
+   - When a question is asked, it's converted to a vector embedding.
+   - Similar chunks from the transcript are retrieved based on vector similarity.
+   - Retrieved chunks provide context for the LLM.
 
 4. **Generation**:
-   - The LLM generates an answer using the retrieved context
-   - The system maintains conversation history for follow-up questions
+   - The LLM generates an answer using the retrieved context.
+   - The system maintains conversation history for follow-up questions.
 
 ## Advanced Speaker Diarization with DOVER-Lap
 
@@ -199,54 +213,47 @@ To use the DOVER-Lap diarization feature:
    - Configure CORS settings to allow frontend access
 
 2. **DynamoDB**:
-   - Create a DynamoDB table with primary key `PodcastID`
-   - Add necessary attributes for metadata storage
+   - Create a DynamoDB table named `Podcasts` with:
+     - Primary Key: `PodcastID` (String)
+     - Sort Key: `Type` (String)
+   - Ensure appropriate IAM permissions for the backend to access this table
 
-3. **OpenSearch**:
-   - Create an OpenSearch domain
-   - Configure security settings (master user or IAM)
-   - Set up network access policies
+3. **ChromaDB Deployment**:
+   - ChromaDB needs to be accessible by the backend. This could involve:
+     - Running ChromaDB as a separate container/service (e.g., on ECS/EKS or a dedicated EC2 instance)
+     - Running ChromaDB persistently on the same instance/container as the FastAPI backend (simpler, suitable for smaller scale)
+   - Ensure the `CHROMA_HOST` and `CHROMA_PORT` environment variables point to the correct ChromaDB instance
 
 4. **IAM Permissions**:
-   - Create an IAM role with permissions for S3, DynamoDB, and OpenSearch
-   - Generate access keys for backend authentication
+   - Create an IAM user or role for the backend application
+   - Grant necessary permissions for S3 (GetObject, PutObject, ListBucket) and DynamoDB (GetItem, PutItem, Query, Scan)
 
-#### Backend Deployment
+#### Backend Deployment (Example: EC2/Docker)
 
-1. **Configure AWS credentials**:
-   ```bash
-   aws configure
-   ```
-
-2. **Set up environment variables**:
-   Create a `.env` file with:
+1. **Set up an EC2 instance** or other compute environment
+2. **Install Docker**
+3. **Create `.env` file** on the server with production settings:
    ```
    IS_LOCAL=false
-   AWS_ACCESS_KEY_ID=your_access_key
-   AWS_SECRET_ACCESS_KEY=your_secret_key
-   AWS_REGION=your_region
-   S3_BUCKET_NAME=your_bucket_name
-   DYNAMODB_TABLE_NAME=your_table_name
-   OPENSEARCH_DOMAIN_ENDPOINT=your_opensearch_endpoint
-   OPENSEARCH_AUTH_METHOD=master_user  # or iam
-   OPENSEARCH_MASTER_USERNAME=your_username  # if using master_user
-   OPENSEARCH_MASTER_PASSWORD=your_password  # if using master_user
+   AWS_REGION=your-aws-region
+   # Add other necessary variables like LLM API keys, HuggingFace token, etc.
+   CHROMA_HOST=your_chromadb_host_or_ip # Or 127.0.0.1 if running on same instance
+   CHROMA_PORT=your_chromadb_port # e.g., 8000
+   # Ensure AWS credentials are configured (e.g., via IAM role attached to EC2)
    ```
-
-3. **Start the backend with OpenSearch**:
+4. **Build and run the backend Docker container** (you might need a Dockerfile):
    ```bash
-   ./start_backend_opensearch.sh
+   # Example docker run command (adapt as needed)
+   docker run -d --env-file .env -p 8000:8000 your-backend-image-name
    ```
+5. **(If running ChromaDB separately)** Ensure the ChromaDB container/service is running and accessible
 
-#### Frontend Deployment
+#### Frontend Deployment (Example: S3 + CloudFront)
 
-1. **Build the frontend**:
-   ```bash
-   cd frontend
-   npm run build
-   ```
-
-2. **Deploy to hosting service** (e.g., AWS Amplify, Vercel, Netlify)
+1. **Build the frontend**: `npm run build`
+2. **Upload the contents** of the `frontend/dist` directory to an S3 bucket configured for static website hosting
+3. **(Optional) Configure CloudFront** as a CDN in front of the S3 bucket for better performance and HTTPS
+4. **Update frontend API endpoint**: Ensure the frontend code points to the deployed backend URL
 
 ## Testing
 
@@ -264,30 +271,27 @@ cd backend
 
 ### Common Issues
 
-1. **OpenSearch Connection Issues**:
-   - Verify credentials in environment variables
-   - Check network access and security groups
-   - Run the OpenSearch test script to diagnose
-
-2. **Transcription Errors**:
-   - Ensure Whisper model is properly installed
-   - Check audio file format (WAV or MP3 recommended)
-
-3. **Vector Store Issues**:
-   - Verify OpenSearch is running and accessible
-   - Check if ChromaDB is properly initialized in local mode
+1. **AWS Credentials**: Ensure correct IAM permissions and that credentials (or IAM role) are properly configured for the backend environment
+2. **DynamoDB Key Schema**: Verify the `Podcasts` table uses `PodcastID` (String) as HASH and `Type` (String) as RANGE key
+3. **ChromaDB Connection**: Check `CHROMA_HOST` and `CHROMA_PORT` environment variables and network connectivity between the backend and ChromaDB
+4. **LLM API Keys**: Make sure API keys for Whisper, summarization, or Q&A models are correctly set in the environment
+5. **HuggingFace Token**: Required for `pyannote` models used in diarization
 
 ## Contributing
 
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature-name`
-3. Commit your changes: `git commit -m 'Add some feature'`
-4. Push to the branch: `git push origin feature-name`
-5. Submit a pull request
+Contributions are welcome! Please feel free to submit a Pull Request
+
+## Dependencies
+
+- [Whisper](https://github.com/openai/whisper) for transcription
+- [LangChain](https://python.langchain.com/) for LLM orchestration
+- [ChromaDB](https://www.trychroma.com/) for vector storage
+- [FastAPI](https://fastapi.tiangolo.com/) for the backend framework
+- [React](https://reactjs.org/) for the frontend framework
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License - see the LICENSE file for details
 
 ## Acknowledgements
 

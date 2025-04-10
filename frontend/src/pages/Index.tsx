@@ -1,5 +1,5 @@
 import React from 'react';
-import Logo from '@/components/logo';
+import { AnimatedLogo } from '@/components/ui/animated-logo';
 import UploadForm from '@/components/upload-form';
 import TranscriptView from '@/components/transcript-view';
 import QASection from '@/components/qa-section';
@@ -187,8 +187,8 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       <header className="sticky top-0 z-50 w-full backdrop-blur-sm border-b-2 border-border/40 bg-background/80">
         <div className="container flex h-16 items-center">
           <div className="flex items-center justify-between w-full">
-            <div className="flex items-center">
-              <Logo size="md" />
+            <div className="flex items-center"> 
+              <AnimatedLogo className="text-black dark:text-white" />
             </div>
             <nav className="hidden md:flex items-center space-x-1">
               <Button variant="ghost" size="sm" className="text-foreground/70 hover:text-foreground hover:bg-primary/20">

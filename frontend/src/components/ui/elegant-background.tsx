@@ -24,7 +24,7 @@ export const ElegantBackground = React.forwardRef<
       lineColor = "#1E2124",
       lineOpacity = 0.1,
       shapeCount = 100,
-      lineCount = 15,
+      lineCount = 10,
       animated = true,
       ...props
     },
@@ -62,14 +62,14 @@ export const ElegantBackground = React.forwardRef<
         const path = `M${formatNumber(startX)},${formatNumber(startY)} C${formatNumber(ctrl1X)},${formatNumber(ctrl1Y)} ${formatNumber(ctrl2X)},${formatNumber(ctrl2Y)} ${formatNumber(endX)},${formatNumber(endY)}`;
         
         const opacity = random(0.05, 0.15, i * 43.5);
-        const width = random(0.1, 0.4, i * 47.1);
+        const width = random(0.1, 0.5, i * 47.1);
         
         return { 
           path, 
           width, 
           opacity, 
           duration: random(5, 10, i * 53.3), 
-          delay: random(0, 3, i * 59.9) 
+          delay: random(0, 0.5, i * 59.9) 
         };
       });
     }, [lineCount]);
