@@ -153,13 +153,15 @@ def summarize_podcast(transcript):
     {text}
     
     Follow these formatting guidelines:
-    - Use proper Markdown formatting
-    - For main topics, use "## Topic Name" format
-    - For subtopics or key points, use bullet points with "- " prefix
-    - Bold important terms or names with **term**
+   - Maintain the same Markdown formatting style as the existing summary
+    - Use clean, structured formatting with bullet points (•) instead of bold text or asterisks
+    - For main points, use bullet points: •
+    - For sub-points, use indentation with dashes: -
+    - Bold important terms 
     - Do not include conversational elements like questions or personal addresses
     - Present information in a professional, third-person style
     - Include speaker names when relevant
+    - Do not include things like "Here’s a summary of the provided conversation, formatted according to your guidelines"
     
     SUMMARY:
     """
@@ -180,12 +182,14 @@ def summarize_podcast(transcript):
     
     Follow these formatting guidelines:
     - Maintain the same Markdown formatting style as the existing summary
-    - For main topics, use "## Topic Name" format
-    - For subtopics or key points, use bullet points with "- " prefix
-    - Bold important terms or names with **term**
+    - Use clean, structured formatting with bullet points (•) instead of bold text or asterisks
+    - For main points, use bullet points: •
+    - For sub-points, use indentation with dashes: -
+    - Bold important terms 
     - Do not include conversational elements like questions or personal addresses
     - Present information in a professional, third-person style
     - Include speaker names when relevant
+    - Do not include things like Here’s a summary of the provided conversation, formatted according to your guidelines:
     
     REFINED SUMMARY:
     """
@@ -333,29 +337,29 @@ def ask_question(question, podcast_id, speaker=None, time_range=None):
             if ai_msg:  # Add AI response if available
                 memory.chat_memory.add_ai_message(ai_msg)
     
-    # Create a custom prompt template to prevent self-evaluation
     from langchain.prompts import PromptTemplate
+    # Format the prompt template with improved instructions for clean, structured responses
+    prompt_template = """You are an AI assistant for answering questions about podcast transcripts.
     
-    qa_template = """You are a helpful assistant answering questions about a podcast.
-    Use the following pieces of context which is a transcript for a podcast formatted into a list of segments which contain start and end times, speaker, and text 
-    to answer the question at the end. You are talking to the user directly.
-    If you don't know the answer, just say that you don't know, don't try to make up an answer.
-    Keep your answers evaluating your own response.
-    Do not include phrases like "based on the context" or "according to the transcript".
-    Never respond as if you're reviewing or evaluating an answer.
-    Never start with phrases like "That's a fantastic explanation" or "Here's a breakdown".
-    Just answer the question directly as if you are having a conversation with the user.
-
-    Talk like you are a podcast assistant helping the user understand the podcast from first principles. Give the answer in a way that the user can understand and in a bit more detail atleast 2 sentences.
+    When responding with summaries or lists:
+    - Use clean, structured formatting with bullet points (•) instead of bold text or asterisks
+    - For main points, use bullet points: •
+    - For sub-points, use indentation with dashes: -
+    - Use clear section headings when appropriate (without any special formatting)
+    - Separate sections with line breaks for better readability
+    - Keep your response concise and easy to scan
+    - Never use markdown formatting like ** or ## in your response
     
-    Context: {context}
+    Use ONLY the following pieces of context to answer the question at the end. If you don't know the answer, just say that you don't know, don't try to make up an answer.
+    
+    {context}
     
     Question: {question}
     
-    Answer: """
+    Helpful Answer:"""
     
     QA_PROMPT = PromptTemplate(
-        template=qa_template, 
+        template=prompt_template, 
         input_variables=["context", "question"]
     )
     
@@ -377,6 +381,26 @@ def ask_question(question, podcast_id, speaker=None, time_range=None):
     # Clean the answer by removing self-evaluation text
     if "Yes, that's a correct summary" in answer:
         answer = answer.split("Yes, that's a correct summary")[0].strip()
+    
+    # Post-process the answer to ensure proper formatting
+    # Replace any remaining markdown-style formatting
+    answer = answer.replace("**", "")
+    answer = answer.replace("##", "")
+    
+    # Ensure bullet points are properly formatted
+    lines = answer.split("\n")
+    formatted_lines = []
+    
+    for line in lines:
+        # Convert any asterisk bullet points to proper bullet points
+        if line.strip().startswith("* "):
+            line = line.replace("* ", "• ", 1)
+        # Convert any dash bullet points at the beginning of lines to proper indented sub-points
+        elif line.strip().startswith("- "):
+            line = line.replace("- ", "  - ", 1)
+        formatted_lines.append(line)
+    
+    answer = "\n".join(formatted_lines)
     
     # Update chat history if podcast_id is provided
     if podcast_id:

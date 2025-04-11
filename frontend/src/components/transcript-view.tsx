@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+import FormattedContent from '@/components/ui/formatted-content';
 
 // Define types for transcript segments and structured transcript
 interface TranscriptSegment {
@@ -376,11 +377,7 @@ const TranscriptView: React.FC = () => {
                     </div>
                   </div>
                   <div className="space-y-4">
-                    {currentPodcast.summary.split('\n\n').map((paragraph, i) => (
-                      <p key={i} className="text-sm">
-                        {paragraph}
-                      </p>
-                    ))}
+                    <FormattedContent content={currentPodcast.summary} />
                   </div>
                 </div>
               ) : (

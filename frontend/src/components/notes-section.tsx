@@ -5,6 +5,7 @@ import { BookOpen, HelpCircle, MessageSquare, Trash2 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import FormattedContent from '@/components/ui/formatted-content';
 
 const NotesSection: React.FC = () => {
   const { currentPodcast, notes, showNoteInQA, saveNote, navigateToTranscriptSegment } = usePodcast();
@@ -104,7 +105,11 @@ const NotesSection: React.FC = () => {
                       <div className="text-xs text-pod-dark-gray mb-1">
                         {note.question.startsWith('[Transcript]') ? 'CONTENT' : 'ANSWER'}
                       </div>
-                      <p className="text-sm">{note.answer}</p>
+                      {note.question.startsWith('[Transcript]') ? (
+                        <p className="text-sm">{note.answer}</p>
+                      ) : (
+                        <FormattedContent content={note.answer} />
+                      )}
                       <div className="mt-2 text-xs text-pod-dark-gray">
                         {new Date(note.timestamp).toLocaleString()}
                       </div>

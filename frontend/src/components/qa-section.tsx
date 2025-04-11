@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { askQuestion } from '@/services/api';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import FormattedContent from '@/components/ui/formatted-content';
 
 interface Message {
   id: string;
@@ -381,9 +382,13 @@ const QASection: React.FC = () => {
                           </div>
                         )}
                       </div>
-                      <p className={`${message.role === 'user' ? 'font-medium' : 'text-sm'}`}>
-                        {message.content}
-                      </p>
+                      {message.role === 'user' ? (
+                        <p className="font-medium">
+                          {message.content}
+                        </p>
+                      ) : (
+                        <FormattedContent content={message.content} />
+                      )}
                       
                       <div className="mt-2 flex items-center justify-between">
                         <div className="text-xs text-gray-500">
