@@ -1,4 +1,3 @@
-
 export interface Podcast {
   id: string;
   name: string;
@@ -20,6 +19,7 @@ export interface Note {
   question: string;
   answer: string;
   timestamp: string;
+  messageId?: string; // Optional message ID for chat notes
 }
 
 export interface ApiError {

@@ -14,7 +14,7 @@ import { Link, Outlet } from 'react-router-dom';
 import { PodcastProvider } from '@/context/podcast-context';
 
 export const MainContent = () => {
-  const { currentPodcast, podcasts } = usePodcast();
+  const { currentPodcast, podcasts, activeTab, setActiveTab } = usePodcast();
 
   if (podcasts.length === 0) {
     return (
@@ -130,7 +130,7 @@ export const MainContent = () => {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <div className="lg:col-span-3">
           <div className="bg-black backdrop-blur-sm rounded-xl shadow-xl border border-gray-800 overflow-hidden">
-            <Tabs defaultValue="transcript" className="w-full">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="w-full grid grid-cols-3 p-1 bg-gray-900">
                 <TabsTrigger value="transcript" className="data-[state=active]:bg-black data-[state=active]:text-white text-gray-300 hover:text-white">
                   <FileAudio size={16} className="mr-2 text-pod-dark-blue" />

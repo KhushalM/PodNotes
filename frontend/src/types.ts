@@ -22,6 +22,7 @@ export interface Note {
   question: string;
   answer: string;
   timestamp: string;
+  messageId?: string; // Optional message ID for chat notes
 }
 
 // Define the ApiError type

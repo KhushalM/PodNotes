@@ -225,7 +225,12 @@ def load_chat_history(podcast_id):
                 return json.load(f)
         except Exception:
             return []
-    return []
+    else:
+        os.makedirs(CHAT_HISTORY_DIR, exist_ok=True)
+        # Create an empty JSON file
+        with open(history_file, 'w') as f:
+            json.dump([], f)
+        return []
 
 def save_chat_history(podcast_id, history):
     """
@@ -362,7 +367,7 @@ def ask_question(question, podcast_id, speaker=None, time_range=None):
         combine_docs_chain_kwargs={"prompt": QA_PROMPT},
         return_source_documents=False,
         return_generated_question=False,
-        verbose=True
+        verbose=False
     )
     
     # Get response

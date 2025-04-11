@@ -12,6 +12,7 @@ export const PodcastProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [error, setError] = useState<ApiError | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
+  const [activeTab, setActiveTab] = useState<string>("transcript");
 
   // Load data from localStorage on initial render
   useEffect(() => {
@@ -134,23 +135,99 @@ export const PodcastProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  const saveNote = (question: string, answer: string) => {
-    if (!currentPodcast) return;
+  const saveNote = (question: string, answer: string, messageId?: string) => {
+    // Check if this note already exists
+    const existingNoteIndex = notes.findIndex(
+      note => note.podcastId === currentPodcast?.id && note.question === question && note.answer === answer
+    );
     
+    if (existingNoteIndex !== -1) {
+      // Note exists, remove it
+      const updatedNotes = [...notes];
+      updatedNotes.splice(existingNoteIndex, 1);
+      setNotes(updatedNotes);
+      localStorage.setItem('notes', JSON.stringify(updatedNotes));
+      return;
+    }
+    
+    // Note doesn't exist, add it
     const newNote: Note = {
-      id: `note-${Date.now()}`,
-      podcastId: currentPodcast.id,
+      id: Date.now().toString(),
+      podcastId: currentPodcast?.id || '',
       question,
       answer,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      messageId
     };
     
-    setNotes(prev => [newNote, ...prev]);
-    toast.success("Note saved successfully!");
+    const updatedNotes = [...notes, newNote];
+    setNotes(updatedNotes);
+    localStorage.setItem('notes', JSON.stringify(updatedNotes));
   };
 
   const clearChat = () => {
     setChatMessages([]);
+  };
+
+  const showNoteInQA = (question: string, answer: string) => {
+    if (!currentPodcast) return;
+    
+    // Switch to the chat tab
+    setActiveTab("chat");
+    
+    // Find if this note has a saved messageId
+    const existingNote = notes.find(
+      note => note.podcastId === currentPodcast.id && note.question === question && note.answer === answer
+    );
+    
+    // If we have a saved messageId, use it for scrolling
+    if (existingNote?.messageId) {
+      sessionStorage.setItem('scrollToMessageId', existingNote.messageId);
+    } else {
+      // Otherwise, create new message IDs
+      const userMessageId = `note-user-${Date.now()}`;
+      const aiMessageId = `note-ai-${Date.now() + 1}`;
+      
+      // Add the messages to the chat
+      const userMessage: ChatMessage = {
+        id: userMessageId,
+        content: question,
+        role: 'user',
+        timestamp: new Date().toISOString()
+      };
+      
+      const aiMessage: ChatMessage = {
+        id: aiMessageId,
+        content: answer,
+        role: 'assistant',
+        timestamp: new Date().toISOString()
+      };
+      
+      setChatMessages(prev => [...prev, userMessage, aiMessage]);
+      
+      // Store the message ID for scrolling
+      sessionStorage.setItem('scrollToMessageId', aiMessageId);
+    }
+    
+    // Notify user
+    toast.success("Showing note in Q&A section");
+  };
+
+  const navigateToTranscriptSegment = (text: string, timestamp?: string) => {
+    if (!currentPodcast) return;
+    
+    // Switch to the transcript tab
+    setActiveTab("transcript");
+    
+    // Store the text to search for in sessionStorage
+    sessionStorage.setItem('scrollToTranscriptText', text);
+    
+    if (timestamp) {
+      sessionStorage.setItem('scrollToTranscriptTimestamp', timestamp);
+    }
+    
+    // Notify user
+    toast.success("Navigating to transcript segment");
   };
 
   const value = {
@@ -160,11 +237,15 @@ export const PodcastProvider: React.FC<{ children: React.ReactNode }> = ({ child
     error,
     chatMessages,
     notes,
+    activeTab,
     uploadPodcast,
     selectPodcast,
     sendChatMessage,
     saveNote,
-    clearChat
+    clearChat,
+    showNoteInQA,
+    setActiveTab,
+    navigateToTranscriptSegment
   };
 
   return (

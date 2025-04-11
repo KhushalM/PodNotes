@@ -1,66 +1,111 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { usePodcast } from '@/hooks/use-podcast';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { FileText, Sparkles, Search, Clock, User, Tag, Download } from 'lucide-react';
+import { FileText, Sparkles, Search, Clock, User, Tag, Download, Bookmark, BookmarkCheck } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { toast } from 'sonner';
+
+// Define types for transcript segments and structured transcript
+interface TranscriptSegment {
+  start: number;
+  end: number;
+  speaker: string;
+  text: string;
+  topic: string;
+}
+
+// Define interface for our new transcript format (array of segments)
+interface TranscriptSegmentItem {
+  start: string | number;
+  end: string | number;
+  speaker: string;
+  text: string;
+  topic?: string;
+}
+
+interface StructuredTranscript {
+  segments?: TranscriptSegment[];
+  text?: string;
+  timestamped_text?: string;
+  [key: string]: unknown; // Using unknown instead of any for better type safety
+}
 
 const TranscriptView: React.FC = () => {
-  const { currentPodcast } = usePodcast();
+  const { currentPodcast, saveNote, notes } = usePodcast();
   const [searchQuery, setSearchQuery] = useState('');
   const [showTimestamps, setShowTimestamps] = useState(true);
+  const [highlightedSegmentIndex, setHighlightedSegmentIndex] = useState<number | null>(null);
 
-  if (!currentPodcast) {
-    return null;
-  }
-
-  // Define types for transcript segments and structured transcript
-  interface TranscriptSegment {
-    start: number;
-    end: number;
-    speaker: string;
-    text: string;
-    topic: string;
-  }
-
-  // Define interface for our new transcript format (array of segments)
-  interface TranscriptSegmentItem {
-    start: string | number;
-    end: string | number;
-    speaker: string;
-    text: string;
-    topic?: string;
-  }
-
-  interface StructuredTranscript {
-    segments?: TranscriptSegment[];
-    text?: string;
-    timestamped_text?: string;
-    [key: string]: unknown; // Using unknown instead of any for better type safety
-  }
+  // Helper function to convert time format (HH:MM:SS) to seconds
+  const parseTimeToSeconds = useCallback((timeStr: string): number => {
+    if (!timeStr) return 0;
+    
+    try {
+      const parts = timeStr.split(':').map(Number);
+      if (parts.length === 3) {
+        // HH:MM:SS format
+        return parts[0] * 3600 + parts[1] * 60 + parts[2];
+      } else if (parts.length === 2) {
+        // MM:SS format
+        return parts[0] * 60 + parts[1];
+      } else {
+        return parseFloat(timeStr);
+      }
+    } catch (e) {
+      console.error("Error parsing time:", timeStr, e);
+      return 0;
+    }
+  }, []);
 
   // Function to format time from seconds to MM:SS
-  const formatTime = (seconds: number): string => {
+  const formatTime = useCallback((seconds: number): string => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = Math.floor(seconds % 60);
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-  };
+  }, []);
 
   // Parse transcript data based on its format
-  const parseTranscript = (): TranscriptSegment[] => {
+  const parseTranscript = useCallback((): TranscriptSegment[] => {
+    if (!currentPodcast || !currentPodcast.transcript) {
+      return [];
+    }
+
     console.log("Parsing transcript:", currentPodcast.transcript);
     
     // If transcript is a string, return a simple segment
     if (typeof currentPodcast.transcript === 'string') {
       console.log("Transcript is a string");
-      return [{
-        start: 0,
-        end: 0,
-        speaker: "Speaker",
-        text: currentPodcast.transcript,
-        topic: "Transcript"
-      }];
+      try {
+        // Try to parse it as JSON first
+        const parsedTranscript = JSON.parse(currentPodcast.transcript);
+        
+        // If it has segments array
+        if (parsedTranscript.segments && Array.isArray(parsedTranscript.segments)) {
+          return parsedTranscript.segments;
+        }
+        
+        // If it has text property
+        if (parsedTranscript.text) {
+          return [{
+            start: 0,
+            end: 0,
+            speaker: "Speaker",
+            text: parsedTranscript.text,
+            topic: "Transcript"
+          }];
+        }
+      } catch (e) {
+        // Not JSON, treat as plain text
+        return [{
+          start: 0,
+          end: 0,
+          speaker: "Speaker",
+          text: currentPodcast.transcript,
+          topic: "Transcript"
+        }];
+      }
     }
     
     // If transcript is an array (our new format)
@@ -110,28 +155,52 @@ const TranscriptView: React.FC = () => {
     
     console.log("Unknown transcript format, returning empty array");
     return [];
-  };
-  
-  // Helper function to convert time format (HH:MM:SS) to seconds
-  const parseTimeToSeconds = (timeStr: string): number => {
-    if (!timeStr) return 0;
+  }, [currentPodcast, parseTimeToSeconds]);
+
+  // Handle navigation from notes
+  useEffect(() => {
+    const scrollToText = sessionStorage.getItem('scrollToTranscriptText');
+    const scrollToTimestamp = sessionStorage.getItem('scrollToTranscriptTimestamp');
     
-    try {
-      const parts = timeStr.split(':').map(Number);
-      if (parts.length === 3) {
-        // HH:MM:SS format
-        return parts[0] * 3600 + parts[1] * 60 + parts[2];
-      } else if (parts.length === 2) {
-        // MM:SS format
-        return parts[0] * 60 + parts[1];
-      } else {
-        return parseFloat(timeStr);
+    if (scrollToText && currentPodcast) {
+      // Find the segment that contains this text
+      const segments = parseTranscript();
+      const segmentIndex = segments.findIndex(segment => 
+        segment.text.includes(scrollToText) || 
+        (scrollToTimestamp && formatTime(segment.start) === scrollToTimestamp)
+      );
+      
+      if (segmentIndex !== -1) {
+        // Set search query to help locate the text
+        setSearchQuery(scrollToText);
+        
+        // Highlight the segment
+        setHighlightedSegmentIndex(segmentIndex);
+        
+        // Scroll to the segment after a delay to ensure rendering
+        setTimeout(() => {
+          const segmentElement = document.getElementById(`transcript-segment-${segmentIndex}`);
+          if (segmentElement) {
+            segmentElement.scrollIntoView({ behavior: 'auto', block: 'center' });
+            
+            // Add highlight effect
+            segmentElement.classList.add('highlight-message');
+            setTimeout(() => {
+              segmentElement.classList.remove('highlight-message');
+            }, 1000);
+          }
+        }, 100);
       }
-    } catch (e) {
-      console.error("Error parsing time:", timeStr, e);
-      return 0;
+      
+      // Clear the session storage
+      sessionStorage.removeItem('scrollToTranscriptText');
+      sessionStorage.removeItem('scrollToTranscriptTimestamp');
     }
-  };
+  }, [currentPodcast, parseTranscript, formatTime, parseTimeToSeconds]);
+
+  if (!currentPodcast) {
+    return null;
+  }
 
   // Get segments from the actual transcript
   const segments = parseTranscript();
@@ -218,7 +287,8 @@ const TranscriptView: React.FC = () => {
               {filteredSegments.map((segment, index) => (
                 <div 
                   key={index} 
-                  className="p-4 rounded-lg bg-white text-black border border-gray-200 shadow-subtle transition-all mx-2"
+                  id={`transcript-segment-${index}`}
+                  className={`p-4 rounded-lg bg-white text-black border border-gray-200 shadow-subtle transition-all mx-2 ${highlightedSegmentIndex === index ? 'highlight-message' : ''}`}
                 >
                   <div className="flex justify-between items-start mb-2">
                     <div className="flex items-center">
@@ -240,9 +310,36 @@ const TranscriptView: React.FC = () => {
                         )}
                       </div>
                     </div>
-                    <div className="px-2 py-1 rounded-full bg-gray-100 text-xs font-medium text-gray-700 flex items-center">
-                      <Tag size={10} className="mr-1" />
-                      {segment.topic}
+                    <div className="flex items-center gap-2">
+                      <div className="px-2 py-1 rounded-full bg-gray-100 text-xs font-medium text-gray-700 flex items-center">
+                        <Tag size={10} className="mr-1" />
+                        {segment.topic}
+                      </div>
+                      {/* Check if this segment is already saved as a note */}
+                      {(() => {
+                        const isAlreadySaved = notes.some(
+                          note => 
+                            note.podcastId === currentPodcast.id && 
+                            note.question === `[Transcript] ${segment.speaker} (${formatTime(segment.start)})` && 
+                            note.answer === segment.text
+                        );
+                        
+                        return (
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className={isAlreadySaved ? "text-blue-500" : "text-gray-400 hover:text-blue-400"}
+                            onClick={() => {
+                              // Create a question format that includes speaker and timestamp
+                              const question = `[Transcript] ${segment.speaker} (${formatTime(segment.start)})`;
+                              saveNote(question, segment.text);
+                            }}
+                            title={isAlreadySaved ? "Remove from notes" : "Save to notes"}
+                          >
+                            {isAlreadySaved ? <BookmarkCheck size={16} /> : <Bookmark size={16} />}
+                          </Button>
+                        );
+                      })()}
                     </div>
                   </div>
                   <div className="mt-2 pl-10">

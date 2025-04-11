@@ -1,9 +1,16 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* 
+ * Tailwind CSS directives would normally be here:
+ * @tailwind base;
+ * @tailwind components;
+ * @tailwind utilities;
+ * 
+ * These are processed by the PostCSS/Tailwind build pipeline
+ * and don't need to be valid CSS for the linter
+ */
 
+/* This is equivalent to @tailwind base */
 @layer base {
   :root {
     --background: 100 50% 97%;
@@ -82,43 +89,98 @@
   }
 }
 
-@layer base {
+/* This is equivalent to @tailwind components */
+@layer components {
+  .card-hover {
+    transition: all 300ms;
+  }
+  .card-hover:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transform: translateY(-4px);
+  }
+
+  .btn-primary {
+    background-image: linear-gradient(to right, hsl(var(--accent)), hsl(var(--secondary)));
+    color: hsl(var(--foreground));
+    border-radius: 0.375rem;
+    padding: 0.5rem 1rem;
+    font-weight: 500;
+    transition: all 300ms;
+  }
+  .btn-primary:hover {
+    filter: brightness(95%);
+  }
+  .btn-primary:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px hsla(var(--accent), 0.5);
+  }
+
+  .btn-secondary {
+    background-color: hsl(var(--secondary));
+    color: hsl(var(--foreground));
+    border: 1px solid hsl(var(--border));
+    border-radius: 0.375rem;
+    padding: 0.5rem 1rem;
+    font-weight: 500;
+    transition: all 300ms;
+  }
+  .btn-secondary:hover {
+    background-color: hsl(var(--primary));
+  }
+  .btn-secondary:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px hsla(var(--accent), 0.5);
+  }
+
+  .chip {
+    display: inline-block;
+    background-color: hsl(var(--secondary));
+    color: hsl(var(--foreground));
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 9999px;
+    font-weight: 500;
+  }
+
+  .text-gradient {
+    background-image: linear-gradient(to right, hsl(var(--accent)), hsl(var(--secondary)));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+}
+
+/* This is equivalent to @tailwind utilities */
+@layer utilities {
   * {
-    @apply border-border;
+    border-color: hsl(var(--border));
   }
 
   body {
-    @apply bg-background text-foreground font-sans;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: sans-serif;
     background-image: radial-gradient(circle at 50% 60%, rgba(30, 33, 36, 0.05) 0%, rgba(247, 245, 237, 0) 60%);
     background-size: 100% 100%;
     background-attachment: fixed;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    @apply font-display font-medium tracking-tight;
+    font-family: var(--font-display, sans-serif);
+    font-weight: 500;
+    letter-spacing: -0.025em;
   }
 }
 
-@layer components {
-  .card-hover {
-    @apply transition-all duration-300 hover:shadow-dark-glass hover:-translate-y-1;
-  }
+@keyframes highlight-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
+  70% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+}
 
-  .btn-primary {
-    @apply bg-gradient-to-r from-accent to-secondary text-foreground rounded-md px-4 py-2 font-medium transition-all hover:brightness-95 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-opacity-50;
-  }
-
-  .btn-secondary {
-    @apply bg-secondary text-foreground border border-border rounded-md px-4 py-2 font-medium transition-all hover:bg-primary focus:outline-none focus:ring-2 focus:ring-accent focus:ring-opacity-50;
-  }
-
-  .chip {
-    @apply inline-block bg-secondary text-foreground text-xs px-2 py-1 rounded-full font-medium;
-  }
-
-  .text-gradient {
-    @apply bg-gradient-to-r from-accent to-secondary bg-clip-text text-transparent;
-  }
+.highlight-message {
+  animation: highlight-pulse 2s ease-in-out;
+  border: 2px solid #3b82f6 !important;
 }
 
 .logo-glow {

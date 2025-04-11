@@ -25,6 +25,65 @@ const QASection: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [showChat, setShowChat] = useState(true);
   const isInitialRender = useRef(true);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  // Ensure the chat is visible when messages are added
+  useEffect(() => {
+    if (messages.length > 0) {
+      setShowChat(true);
+    }
+  }, [messages]);
+
+  // Scroll to specific message if ID is in sessionStorage
+  useEffect(() => {
+    const scrollToMessageId = sessionStorage.getItem('scrollToMessageId');
+    if (scrollToMessageId) {
+      // Make sure the QA section is visible
+      setShowChat(true);
+      
+      // Small delay to ensure the DOM has updated
+      setTimeout(() => {
+        const messageElement = document.getElementById(scrollToMessageId);
+        if (messageElement) {
+          console.log('Found message element:', messageElement);
+          
+          // Find the scroll container - the actual viewport element inside the ScrollArea
+          const scrollViewport = document.querySelector('[data-radix-scroll-area-viewport]');
+          
+          if (scrollViewport) {
+            console.log('Found scroll viewport:', scrollViewport);
+            
+            // Calculate position to scroll to
+            const scrollPosition = messageElement.offsetTop - 150; // Offset to center it
+            
+            // Scroll to position
+            scrollViewport.scrollTop = scrollPosition;
+            
+            // Highlight the message
+            messageElement.classList.add('highlight-message');
+            setTimeout(() => {
+              messageElement.classList.remove('highlight-message');
+            }, 1500);
+          } else {
+            console.warn('Could not find scroll viewport, using fallback method');
+            // Fallback method
+            messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Highlight the message
+            messageElement.classList.add('highlight-message');
+            setTimeout(() => {
+              messageElement.classList.remove('highlight-message');
+            }, 15000);
+          }
+        } else {
+          console.warn(`Message element with ID ${scrollToMessageId} not found`);
+        }
+        
+        // Clear the session storage
+        sessionStorage.removeItem('scrollToMessageId');
+      }, 500); // Increased delay to ensure DOM is fully updated
+    }
+  }, [messages, setShowChat]);
 
   // Load saved messages from localStorage when podcast changes
   useEffect(() => {
@@ -203,9 +262,9 @@ const QASection: React.FC = () => {
               }
               
               if (questionIndex >= 0) {
-                // Save the note to the global context
-                console.log('Saving note:', prev[questionIndex].content, message.content);
-                saveNote(prev[questionIndex].content, message.content);
+                // Save the note to the global context with the message ID
+                console.log('Saving note:', prev[questionIndex].content, message.content, messageId);
+                saveNote(prev[questionIndex].content, message.content, messageId);
                 toast.success(newSavedState ? 'Answer saved to your notes' : 'Answer removed from your notes');
               } else {
                 toast.error('Could not find the question for this answer');
@@ -247,7 +306,7 @@ const QASection: React.FC = () => {
   ];
 
   return (
-    <Card className="w-full glass animate-fade-in">
+    <Card className="w-full glass animate-fade-in" id="qa-section">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center justify-center bg-gradient-to-r from-blue-500/20 to-purple-500/20 p-4 rounded-full mb-4">
           <div className="flex items-center gap-2">
@@ -297,7 +356,7 @@ const QASection: React.FC = () => {
             </div>
           </div>
           ) : (
-            <ScrollArea className="h-[400px] pr-4">
+            <ScrollArea className="h-[400px] pr-4" ref={scrollAreaRef}>
               <div className="flex flex-col gap-4 mb-4 px-6">
                 {messages.map((message) => (
                   <div 
@@ -309,6 +368,7 @@ const QASection: React.FC = () => {
                         ${message.role === 'user' 
                           ? 'bg-gray-900 text-white' 
                           : 'bg-white text-black'}`}
+                      id={message.id}
                     >
                       <div className="flex items-start gap-3 mb-2">
                         {message.role === 'user' ? (
