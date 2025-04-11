@@ -23,10 +23,10 @@ IS_LOCAL = os.environ.get('IS_LOCAL', 'true').lower() == 'true'
 chat_histories = {}
 
 # Path to store chat histories
-CHAT_HISTORY_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "chat_histories")
+CHAT_HISTORY_DIR = os.path.join(os.environ.get('HOME'), "PodNotes_data", "chat_histories")
 os.makedirs(CHAT_HISTORY_DIR, exist_ok=True)
 
-VECTOR_STORE_DIR = Path(os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "vector_stores"))
+VECTOR_STORE_DIR = Path(os.path.join(os.environ.get('HOME'), "PodNotes_data", "vector_stores"))
 os.makedirs(VECTOR_STORE_DIR, exist_ok=True)
 
 # Register cleanup function to prevent semaphore leaks
@@ -43,8 +43,8 @@ def cleanup_resources():
 atexit.register(cleanup_resources)
 
 def get_llm():
-    model_name = "gemma3:4b"
-    return Ollama(model=model_name)
+    model_name = "gemma3:12b"
+    return Ollama(model=model_name, temperature=0.7)
 
 def summarize_podcast(transcript):
     from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -371,7 +371,7 @@ def ask_question(question, podcast_id, speaker=None, time_range=None):
         combine_docs_chain_kwargs={"prompt": QA_PROMPT},
         return_source_documents=False,
         return_generated_question=False,
-        verbose=False
+        verbose=True
     )
     
     # Get response

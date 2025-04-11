@@ -35,7 +35,7 @@ def get_device():
     return "cpu"
 
 # Directory to store vector stores for each podcast
-VECTOR_STORE_DIR = Path(os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "vector_stores"))
+VECTOR_STORE_DIR = Path(os.path.join(os.environ.get('HOME'), "PodNotes_data", "vector_stores"))
 os.makedirs(VECTOR_STORE_DIR, exist_ok=True)
 
 
@@ -243,8 +243,10 @@ def setup_ChromaVS(podcast_id, transcript):
         
         # Create Document objects for each segment
         documents = []
+        ids = [] 
         for i, segment in enumerate(formatted_segments):
             doc_id = f"{podcast_id}-segment-{i}"
+            ids.append(doc_id)
             # Create a Document object with the segment text and metadata
             doc = Document(
                 page_content=segment["text"],
@@ -262,7 +264,7 @@ def setup_ChromaVS(podcast_id, transcript):
             documents.append(doc)
         
         # Add documents to the vector store
-        vector_store.add_documents(documents)
+        vector_store.add_documents(documents, ids=ids)
         
         # Persist the vector store
         vector_store.persist()
@@ -313,7 +315,7 @@ def retrieve_from_ChromaVS(podcast_id, query, hybrid=True, filter_metadata=None,
                     # Convert to Document objects
                     if 'documents' in all_docs and 'metadatas' in all_docs:
                         for i, (doc, metadata) in enumerate(zip(all_docs['documents'], all_docs['metadatas'])):
-                            documents.append(Document(page_content=doc, metadata=metadata))
+                            documents.append(Document(page_content=doc, metadata=metadata, id=f"{podcast_id}-segment-{i}"))
                     
                     # Create BM25 retriever
                     bm25_retriever = BM25Retriever.from_documents(documents)
@@ -414,6 +416,8 @@ def retrieve_with_metadata_filters(podcast_id, query, speaker=None, start_time=N
     # Log the metadata filters being applied
     if filter_metadata:
         logger.info(f"Applying metadata filters: {filter_metadata}")
+
+    logger.info(f"Query: {query}\n speaker: {speaker}\n start_time: {start_time}\n end_time: {end_time}")    
     
     # Use the main retrieve function with filters
     return retrieve_from_ChromaVS(

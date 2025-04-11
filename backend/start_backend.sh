@@ -19,7 +19,7 @@ export DIARIZATION=false
 echo "DIARIZATION value in shell: $DIARIZATION"
 
 # Vector store configuration
-export VECTOR_STORE_DIR=${VECTOR_STORE_DIR:-"./data/vector_stores"}
+export VECTOR_STORE_DIR=${VECTOR_STORE_DIR:-"~/PodNotes_data/vector_stores"}
 echo "Using vector store directory: $VECTOR_STORE_DIR"
 
 # HuggingFace token for pyannote.audio (required for speaker diarization)
