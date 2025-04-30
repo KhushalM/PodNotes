@@ -141,6 +141,136 @@ To use the DOVER-Lap diarization feature:
    - Requires PyTorch and additional dependencies
    - Recommended: GPU for faster processing of longer podcasts
 
+## Dockerized Local Development
+
+PodNotes supports fully containerized local development using Docker Compose. This will start the backend, frontend, and Ollama LLM services with a single command.
+
+### Prerequisites
+- [Docker](https://www.docker.com/get-started) and [Docker Compose](https://docs.docker.com/compose/install/) installed
+
+### Quick Start
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/yourusername/PodNotes.git
+   cd PodNotes
+   ```
+2. **Configure environment variables:**
+   - Copy and edit the example env files as needed:
+     ```bash
+     cp backend/env.example backend/.env
+     # Edit backend/.env with your credentials and settings
+     ```
+   - (Optional) Configure HuggingFace, AWS, and other tokens as needed in `backend/.env`.
+3. **Build and start all services:**
+   ```bash
+   docker-compose up --build
+   ```
+   This will:
+   - Build and run the backend (FastAPI, ChromaDB integration, etc.) on port 8001
+   - Build and run the frontend (React, Vite) on port 80
+   - Start the Ollama LLM service on port 11434
+
+4. **Access the application:**
+   - Frontend: [http://localhost](http://localhost)
+   - Backend API docs: [http://localhost:8001/docs](http://localhost:8001/docs)
+   - Ollama API: [http://localhost:11434](http://localhost:11434)
+
+5. **Stopping services:**
+   ```bash
+   docker-compose down
+   ```
+
+#### Notes
+- The backend is configured to talk to Ollama at `http://ollama:11434` (as defined in `docker-compose.yml`).
+- Ollama model data is persisted in a Docker volume (`ollama_data`).
+- Uploaded files and temporary data are mapped to the host for development convenience.
+- You can run `docker-compose up --build` anytime you change code or dependencies.
+
+---
+
+## Project Structure
+
+```
+PodNotes/
+├── backend/        # FastAPI backend, AI services, vector DB logic
+│   ├── services/   # Modular service files (AWS, ChromaDB, LangChain, Ollama, etc.)
+│   ├── main.py     # FastAPI app entrypoint
+│   ├── Dockerfile  # Backend Docker build config
+│   └── ...
+├── frontend/       # React (Vite) frontend
+│   ├── src/        # React components, pages, utils
+│   ├── Dockerfile  # Frontend Docker build config
+│   └── ...
+├── docker-compose.yml # Multi-service orchestration (backend, frontend, ollama)
+└── README.md       # Project documentation
+```
+
+- **backend/services/**: Contains all major service modules (AWS, ChromaDB, LangChain, Ollama integration, etc.)
+- **frontend/src/**: All frontend React/TypeScript code
+- **docker-compose.yml**: Defines and networks all services for local development
+
+---
+
+## Docker Compose Reference
+
+Here is a reference for the provided `docker-compose.yml`:
+
+```yaml
+services:
+  backend:
+    build:
+      context: ./backend
+    env_file:
+      - ./backend/.env
+    environment:
+      - IS_LOCAL=false
+      - IS_AWS=${IS_AWS:-false}
+      - MOCK_MODE=${MOCK_MODE:-false}
+      - DIARIZATION=${DIARIZATION:-false}
+      - VECTOR_STORE_DIR=/app/data/vector_stores
+      - OLLAMA_BASE_URL=http://ollama:11434
+    volumes:
+      - ./backend/temp:/app/temp
+    ports:
+      - "8001:8001"
+    restart: unless-stopped
+    depends_on:
+      - ollama
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    environment:
+      - VITE_API_URL=http://backend:8001
+
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+
+volumes:
+  ollama_data:
+```
+
+---
+
+## Troubleshooting Docker
+
+- **Backend cannot connect to Ollama:** Ensure the Ollama service is running and the backend is using `OLLAMA_BASE_URL=http://ollama:11434`.
+- **File permission errors:** Make sure your host user has permission to write to the mapped `backend/temp` directory.
+- **Port conflicts:** Make sure ports 80, 8001, and 11434 are free on your host.
+- **AWS/Cloud issues:** Double-check your `.env` configuration and IAM permissions.
+
+---
+
 ## Setup and Installation
 
 ### Prerequisites

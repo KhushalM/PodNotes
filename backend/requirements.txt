@@ -11,3 +11,4 @@ whisper==1.1.10
 python-dotenv==1.0.1
 sentence-transformers==2.6.0
 langchain_huggingface==0.0.1
+pyfalcon

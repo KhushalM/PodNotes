@@ -1,0 +1,43 @@
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.pytest_cache/
+
+# Virtual environments
+PN/
+venv/
+ENV/
+env/
+
+# Local development files
+.env
+.env.*
+!env.example
+
+# Temporary files and directories
+temp/
+*.tmp
+*.bak
+*.swp
+*~
+
+# Data files that should be mounted as volumes
+data/
+model_cache/
+
+# Version control
+.git
+.gitignore
+
+# IDE files
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# OS files
+.DS_Store
+Thumbs.db

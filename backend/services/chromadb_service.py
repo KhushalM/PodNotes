@@ -25,10 +25,10 @@ MODEL_CACHE = Path("./model_cache")
 MODEL_CACHE.mkdir(exist_ok=True)
 
 def get_device():
-    if torch.backends.mps.is_available():
+    if torch.mps.is_available():
         logger.info("Using MPS device")
         return "mps"
-    elif torch.backends.cuda.is_available():
+    elif torch.cuda.is_available():
         logger.info("Using CUDA device")
         return "cuda"
     logger.info("Using CPU device")
