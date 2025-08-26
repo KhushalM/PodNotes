@@ -70,29 +70,31 @@ The backend logic is organized into services within the `backend/services/` dire
 
 ## How RAG Works in PodNotes
 
-PodNotes uses a standard **Retrieval-Augmented Generation (RAG)** approach to provide accurate answers to questions about podcast content:
+PodNotes uses a **hybrid Retrieval-Augmented Generation (RAG)** approach to provide accurate and context-rich answers to questions about podcast content:
 
 1. **Document Processing**:
-   - Podcast audio is transcribed to text using Whisper.
-   - Text is split into smaller chunks.
-   - Each chunk is converted to a vector embedding.
-   - Vector embeddings and transcript metadata are stored in **ChromaDB**.
-   - Original audio files and structured transcripts are stored in S3 (AWS) or locally.
-   - Podcast metadata (like summaries) is stored in DynamoDB (AWS) or locally.
+   - Podcast audio is transcribed to text using Whisper  
+   - Text is split into smaller chunks  
+   - Each chunk is converted to a vector embedding  
+   - Vector embeddings and transcript metadata are stored in **ChromaDB**  
+   - Original audio files and structured transcripts are stored in S3 (AWS) or locally  
+   - Podcast metadata (like summaries) is stored in DynamoDB (AWS) or locally  
 
 2. **Storage**:
-   - Vector embeddings are stored in ChromaDB.
-   - Metadata and references are stored in DynamoDB.
+   - **ChromaDB** stores vector embeddings  
+   - **BM25 index** is built over transcript text for keyword-based retrieval  
+   - Metadata and references are stored in DynamoDB  
 
 3. **Retrieval**:
-   - When a question is asked, it's converted to a vector embedding.
-   - Similar chunks from the transcript are retrieved based on vector similarity.
-   - Retrieved chunks provide context for the LLM.
+   - When a question is asked, two retrieval strategies are run in parallel:  
+     - **BM25 lexical retrieval**: Finds chunks with exact keyword matches  
+     - **Semantic retrieval (vector search)**: Finds chunks semantically similar to the question  
+   - The two results are fused (hybrid scoring) to maximize coverage and relevance  
+   - Retrieved chunks provide context for the LLM  
 
 4. **Generation**:
-   - The LLM generates an answer using the retrieved context.
-   - The system maintains conversation history for follow-up questions.
-
+   - The LLM generates an answer using the retrieved context  
+   - The system maintains conversation history for follow-up questions
 ## Advanced Speaker Diarization with DOVER-Lap
 
 PodNotes uses DOVER-Lap (Diarization Output Voting Error Reduction - Label-Propagation) for accurate speaker identification in podcasts:
