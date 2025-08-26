@@ -1,7 +1,5 @@
 # PodNotes
 
-![PodNotes Logo](frontend/public/podnotes-logo.png)
-
 A full-stack application for podcast transcription, summarization, and interactive Q&A using Retrieval-Augmented Generation (RAG).
 
 ## Overview
